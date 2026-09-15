@@ -320,7 +320,7 @@ button:disabled {
 .videoFrameGrid {
   display: grid;
   grid-template-columns: minmax(320px, 0.82fr) minmax(460px, 1.18fr);
-  gap: 18px;
+  gap: 12px;
   max-width: 1480px;
   margin: 0 auto;
 }
@@ -328,19 +328,24 @@ button:disabled {
 .videoFrameMain {
   height: 100dvh;
   overflow: hidden;
-  padding-top: 18px;
-  padding-bottom: 18px;
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 
 .videoFramePage {
   height: 100%;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 12px;
+  gap: 8px;
 }
 
 .videoFramePage .pageHeader {
   margin: 0;
+}
+
+.videoFramePage .pageHeader h1 {
+  margin-bottom: 3px;
+  font-size: 24px;
 }
 
 .videoFrameGrid {
@@ -352,7 +357,7 @@ button:disabled {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  padding: 20px;
+  padding: 14px;
   border: 1px solid #d6e3f2;
   border-radius: 12px;
   background: #fff;
@@ -365,7 +370,7 @@ button:disabled {
 }
 
 .videoFramePanel h2 {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .videoFramePanel h3 {
@@ -375,16 +380,16 @@ button:disabled {
 .videoFrameSourcePanel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .videoFrameUpload {
-  min-height: clamp(92px, 14vh, 126px);
+  min-height: clamp(78px, 12vh, 106px);
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 7px;
-  padding: 18px;
+  gap: 4px;
+  padding: 10px;
   border: 1px dashed #9dc3f8;
   border-radius: 10px;
   background: #f8fbff;
@@ -393,7 +398,7 @@ button:disabled {
 
 .videoFrameUpload strong {
   color: #233851;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .videoFrameUpload span,
@@ -416,8 +421,8 @@ button:disabled {
   grid-template-columns: 82px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  min-height: 42px;
-  padding: 0 12px;
+  min-height: 36px;
+  padding: 0 10px;
   border: 1px solid #dce7f2;
   border-radius: 8px;
   background: #f7fbff;
@@ -434,7 +439,7 @@ button:disabled {
 
 .videoFramePlayer {
   width: 100%;
-  height: clamp(146px, 22vh, 210px);
+  height: clamp(122px, 19vh, 178px);
   display: block;
   border-radius: 8px;
   background: #161d27;
@@ -456,8 +461,8 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  min-height: 40px;
-  padding: 10px 12px;
+  min-height: 34px;
+  padding: 7px 10px;
   border-right: 1px solid #e4edf6;
   border-bottom: 1px solid #e4edf6;
   color: #6b7a90;
@@ -480,8 +485,8 @@ button:disabled {
 
 .videoFrameSettings {
   display: grid;
-  gap: 12px;
-  padding-top: 16px;
+  gap: 8px;
+  padding-top: 10px;
   border-top: 1px solid #dce7f2;
 }
 
@@ -499,7 +504,7 @@ button:disabled {
 
 .videoFrameFpsField input {
   width: 112px;
-  height: 40px;
+  height: 36px;
   padding: 0 10px;
   border: 1px solid #bdd4ef;
   border-radius: 7px;
@@ -514,7 +519,7 @@ button:disabled {
 }
 
 .videoFrameOutputSelect {
-  padding: 11px 12px;
+  padding: 9px 10px;
   border: 1px solid #c7d9ee;
   border-radius: 7px;
   background: #f7fbff;
@@ -528,14 +533,14 @@ button:disabled {
 
 .videoFrameStartButton {
   width: 100%;
-  height: 44px;
+  height: 40px;
   margin-top: 4px;
 }
 
 .videoFrameOutputPanel {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
 }
 
 .videoFramePanelHeader,
@@ -566,7 +571,7 @@ button:disabled {
 }
 
 .videoFrameOutputPreview .videoFramePlayer {
-  height: clamp(210px, 34vh, 340px);
+  height: clamp(180px, 29vh, 278px);
 }
 
 .videoFrameOutputPreview span {
@@ -583,7 +588,7 @@ button:disabled {
 
 .videoFrameProgress {
   display: grid;
-  gap: 9px;
+  gap: 6px;
 }
 
 .videoFrameProgressTitle strong,
@@ -597,7 +602,7 @@ button:disabled {
 }
 
 .videoFrameProgressTrack {
-  height: 12px;
+  height: 8px;
   overflow: hidden;
   border-radius: 999px;
   background: #e6edf5;
@@ -625,7 +630,7 @@ button:disabled {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 36px;
+  min-height: 32px;
   border-radius: 7px;
   background: #f1f5f9;
   color: #7a8ba0;
@@ -639,7 +644,7 @@ button:disabled {
 }
 
 .videoFrameOutputInfo {
-  padding-top: 14px;
+  padding-top: 10px;
   border-top: 1px solid #dce7f2;
 }
 
@@ -653,7 +658,7 @@ button:disabled {
 
 .videoFrameStatus {
   margin-top: auto;
-  padding: 12px;
+  padding: 9px 10px;
   border-radius: 7px;
   background: #f3f7fb;
 }
