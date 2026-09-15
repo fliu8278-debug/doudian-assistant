@@ -587,8 +587,9 @@ function NewcomerGiftWorkbench({ currentShop, shops }: { currentShop?: Shop; sho
   }
 
   return (
-    <>
-      <div className="pageHeader">
+    <div className="workspacePage marketingWorkspace">
+      <div className="workspaceBreadcrumb">营销 / 建立新人礼金</div>
+      <div className="pageHeader workspaceHeader">
         <div>
           <h1>新人礼金建立</h1>
           <p>先设置活动时间，再导入款号和礼金金额。</p>
@@ -753,7 +754,7 @@ function NewcomerGiftWorkbench({ currentShop, shops }: { currentShop?: Shop; sho
           </div>
         </aside>
       </section>
-    </>
+    </div>
   );
 }
 
@@ -867,8 +868,9 @@ function CouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Sh
   }
 
   return (
-    <>
-      <div className="pageHeader">
+    <div className="workspacePage marketingWorkspace">
+      <div className="workspaceBreadcrumb">营销 / 建立优惠券</div>
+      <div className="pageHeader workspaceHeader">
         <div>
           <h1>涨粉券建立</h1>
           <p>先设置本批领取时间，再导入款号和满减金额。</p>
@@ -1035,7 +1037,7 @@ function CouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Sh
           </div>
         </aside>
       </section>
-    </>
+    </div>
   );
 }
 
