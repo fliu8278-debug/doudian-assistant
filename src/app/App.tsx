@@ -6,7 +6,7 @@ import { normalizeNewcomerGiftRow, validateNewcomerGiftRow } from '../imports/ne
 import { createCouponBatch, createNewcomerGiftBatch, getCouponBatch, getNewcomerGiftBatch, getShops, stopCouponBatch, stopNewcomerGiftBatch } from './api';
 import { ShopList } from './pages/shops/ShopList';
 
-type Page = 'shops' | 'coupon' | 'newcomerGift';
+type Page = 'shops' | 'coupon' | 'newcomerGift' | 'videoFrameExtraction';
 type RawImportRow = Record<string, string>;
 type CouponPreviewRow = {
   rowNumber: number;
@@ -32,6 +32,7 @@ export function App() {
     shop: true,
     marketing: true,
     product: true,
+    video: true,
     records: true
   });
 
@@ -117,6 +118,23 @@ export function App() {
         </NavGroup>
 
         <NavGroup
+          open={openGroups.video}
+          title="视频"
+          onToggle={() => setOpenGroups(toggleGroup('video'))}
+        >
+          <div className="navParent">视频工具</div>
+          <div className="subNav">
+            <button
+              className={navClass(page === 'videoFrameExtraction', 'subItem')}
+              onClick={() => setPage('videoFrameExtraction')}
+              type="button"
+            >
+              视频抽帧
+            </button>
+          </div>
+        </NavGroup>
+
+        <NavGroup
           open={openGroups.records}
           title="记录"
           onToggle={() => setOpenGroups(toggleGroup('records'))}
@@ -142,10 +160,23 @@ export function App() {
           />
         ) : page === 'newcomerGift' ? (
           <NewcomerGiftWorkbench currentShop={currentShop} shops={shops} />
+        ) : page === 'videoFrameExtraction' ? (
+          <VideoFrameExtractionPlaceholder />
         ) : (
           <CouponWorkbench currentShop={currentShop} shops={shops} />
         )}
       </main>
+    </div>
+  );
+}
+
+function VideoFrameExtractionPlaceholder() {
+  return (
+    <div className="pageHeader">
+      <div>
+        <h1>视频抽帧</h1>
+        <p>视频导入、抽帧和导出功能即将推出。</p>
+      </div>
     </div>
   );
 }
