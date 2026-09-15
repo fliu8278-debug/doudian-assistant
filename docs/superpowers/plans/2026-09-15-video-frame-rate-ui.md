@@ -16,13 +16,13 @@
 - Modify: `src/app/App.test.tsx`
 - Modify: `src/app/App.tsx`
 
-- [ ] **Step 1: 写入失败的页面结构测试**
+- [x] **Step 1: 写入失败的页面结构测试**
 
-在 `src/app/App.test.tsx` 的“应用侧边栏”测试后新增：
+在 `src/app/App.test.tsx` 中导入 `VideoFrameRateWorkbench`，并在“应用侧边栏”测试后新增：
 
 ```tsx
 it('提供左侧处理与右侧输出视频工作区', () => {
-  const markup = renderToStaticMarkup(<App />);
+  const markup = renderToStaticMarkup(<VideoFrameRateWorkbench />);
 
   expect(markup).toContain('源视频与参数');
   expect(markup).toContain('导入本地视频');
@@ -34,13 +34,13 @@ it('提供左侧处理与右侧输出视频工作区', () => {
 });
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 Run: `npm test -- src/app/App.test.tsx`
 
 Expected: FAIL，缺少“源视频与参数”。
 
-- [ ] **Step 3: 用最小组件替换视频占位页**
+- [x] **Step 3: 用最小组件替换视频占位页**
 
 在 `src/app/App.tsx` 中把 `VideoFrameExtractionPlaceholder` 替换为 `VideoFrameRateWorkbench`。组件须在初始渲染中输出：
 
@@ -58,13 +58,13 @@ Expected: FAIL，缺少“源视频与参数”。
 </section>
 ```
 
-- [ ] **Step 4: 运行测试确认通过**
+- [x] **Step 4: 运行测试确认通过**
 
 Run: `npm test -- src/app/App.test.tsx`
 
 Expected: PASS，2 个测试通过。
 
-- [ ] **Step 5: 提交测试与初始结构**
+- [x] **Step 5: 提交测试与初始结构**
 
 ```bash
 git add src/app/App.tsx src/app/App.test.tsx
@@ -77,11 +77,11 @@ git commit -m "feat: add video processing workspace"
 - Modify: `src/app/App.tsx`
 - Modify: `src/app/styles.css`
 
-- [ ] **Step 1: 实现文件选择与源视频状态**
+- [x] **Step 1: 实现文件选择与源视频状态**
 
 在 `VideoFrameRateWorkbench` 中使用 `useRef<HTMLInputElement>` 和 `useState` 保存 `File | null`、源视频对象 URL、帧率和处理状态。文件输入限定为 `accept="video/mp4"`。选择后调用 `URL.createObjectURL(file)`，显示文件名和大小，并以 `<video controls src={sourceUrl}>` 预览；清除和卸载时调用 `URL.revokeObjectURL`。
 
-- [ ] **Step 2: 实现处理状态演示**
+- [x] **Step 2: 实现处理状态演示**
 
 将状态限定为 `idle | reading | encoding | complete`。点击“开始处理”仅在已有文件时生效，按以下顺序更新右栏：
 
@@ -93,7 +93,7 @@ window.setTimeout(() => setProcessingState('complete'), 1400);
 
 `complete` 时把源视频 URL 用作输出预览，显示 100% 和“处理完成”，并启用“下载视频”。下载按钮本阶段使用 `<a download>` 指向对象 URL，明确这是 UI 演示，真实重新编码将在 FFmpeg 阶段替换该 URL。
 
-- [ ] **Step 3: 实现与现有软件一致的样式**
+- [x] **Step 3: 实现与现有软件一致的样式**
 
 在 `src/app/styles.css` 新增 `videoFrame*` 类：
 
@@ -106,19 +106,19 @@ window.setTimeout(() => setProcessingState('complete'), 1400);
 
 为上传区、元数据、参数行、输出信息、三阶段进度、状态条和禁用下载按钮补足布局；在 `@media (max-width: 1100px)` 把 `.videoFrameGrid` 设为单列。
 
-- [ ] **Step 4: 运行完整验证**
+- [x] **Step 4: 运行完整验证**
 
 Run: `npm test && npm run typecheck && npm run build`
 
 Expected: 所有测试、类型检查和生产构建通过。
 
-- [ ] **Step 5: 打开本地预览并手动检查**
+- [x] **Step 5: 打开本地预览并手动检查**
 
 Run: `npm run dev:web`
 
 Expected: 打开 `http://127.0.0.1:5173/` 后，点击“视频抽帧”可选择本地 MP4、设置帧率、启动进度演示，并在完成后看到右侧新视频预览与“下载视频”。
 
-- [ ] **Step 6: 提交但不推送**
+- [x] **Step 6: 提交但不推送**
 
 ```bash
 git add src/app/App.tsx src/app/styles.css

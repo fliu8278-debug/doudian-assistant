@@ -317,6 +317,318 @@ button:disabled {
   font-weight: 700;
 }
 
+.videoFrameGrid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(460px, 1.18fr);
+  gap: 18px;
+  max-width: 1480px;
+  margin: 0 auto;
+}
+
+.videoFramePanel {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #d6e3f2;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.videoFramePanel h2,
+.videoFramePanel h3 {
+  margin: 0;
+  color: #233851;
+}
+
+.videoFramePanel h2 {
+  font-size: 20px;
+}
+
+.videoFramePanel h3 {
+  font-size: 16px;
+}
+
+.videoFrameSourcePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.videoFrameUpload {
+  min-height: 136px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  padding: 18px;
+  border: 1px dashed #9dc3f8;
+  border-radius: 10px;
+  background: #f8fbff;
+  text-align: center;
+}
+
+.videoFrameUpload strong {
+  color: #233851;
+  font-size: 16px;
+}
+
+.videoFrameUpload span,
+.videoFrameSettings p,
+.videoFrameProgress p,
+.videoFrameStatus {
+  color: #6b7a90;
+  font-size: 13px;
+}
+
+.videoFrameUpload button {
+  min-width: 112px;
+  margin-top: 3px;
+  border-color: #b9d2f1;
+  color: #1769e0;
+}
+
+.videoFrameFileRow {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #dce7f2;
+  border-radius: 8px;
+  background: #f7fbff;
+  color: #6b7a90;
+  font-size: 13px;
+}
+
+.videoFrameFileRow strong {
+  overflow: hidden;
+  color: #44546a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.videoFramePlayer {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: block;
+  border-radius: 8px;
+  background: #161d27;
+  object-fit: contain;
+}
+
+.videoFrameMetadata,
+.videoFrameOutputInfo dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid #e4edf6;
+  border-left: 1px solid #e4edf6;
+}
+
+.videoFrameMetadata div,
+.videoFrameOutputInfo dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  padding: 10px 12px;
+  border-right: 1px solid #e4edf6;
+  border-bottom: 1px solid #e4edf6;
+  color: #6b7a90;
+  font-size: 13px;
+}
+
+.videoFrameMetadata dt,
+.videoFrameMetadata dd,
+.videoFrameOutputInfo dt,
+.videoFrameOutputInfo dd {
+  margin: 0;
+}
+
+.videoFrameMetadata dd,
+.videoFrameOutputInfo dd {
+  color: #35465a;
+  font-weight: 600;
+  text-align: right;
+}
+
+.videoFrameSettings {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #dce7f2;
+}
+
+.videoFrameFpsField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #52657d;
+  font-size: 14px;
+}
+
+.videoFrameFpsField span {
+  min-width: 82px;
+}
+
+.videoFrameFpsField input {
+  width: 112px;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid #bdd4ef;
+  border-radius: 7px;
+  color: #233851;
+  background: #fff;
+  font-weight: 700;
+}
+
+.videoFrameFpsField b {
+  color: #52657d;
+  font-size: 13px;
+}
+
+.videoFrameOutputSelect {
+  padding: 11px 12px;
+  border: 1px solid #c7d9ee;
+  border-radius: 7px;
+  background: #f7fbff;
+  color: #52657d;
+  font-size: 14px;
+}
+
+.videoFrameSettings p {
+  margin: -3px 0 0;
+}
+
+.videoFrameStartButton {
+  width: 100%;
+  height: 44px;
+  margin-top: 4px;
+}
+
+.videoFrameOutputPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.videoFramePanelHeader,
+.videoFrameProgressTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.videoFramePanelHeader button,
+.videoFrameDownloadButton {
+  display: inline-grid;
+  place-items: center;
+  min-width: 112px;
+  height: 36px;
+  border: 1px solid #bcd4ef;
+  border-radius: 8px;
+  background: #fff;
+  color: #1769e0;
+  padding: 0 12px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.videoFrameOutputPreview {
+  position: relative;
+}
+
+.videoFrameOutputPreview span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(88%, 330px);
+  transform: translate(-50%, -50%);
+  color: #e7eef7;
+  font-size: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.videoFrameProgress {
+  display: grid;
+  gap: 9px;
+}
+
+.videoFrameProgressTitle strong,
+.videoFrameProgressTitle b {
+  color: #233851;
+  font-size: 15px;
+}
+
+.videoFrameProgressTitle b {
+  color: #1769e0;
+}
+
+.videoFrameProgressTrack {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e6edf5;
+}
+
+.videoFrameProgressTrack i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #1769e0;
+  transition: width 280ms ease;
+}
+
+.videoFrameProgress p {
+  margin: 0;
+}
+
+.videoFrameStages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.videoFrameStages span {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 36px;
+  border-radius: 7px;
+  background: #f1f5f9;
+  color: #7a8ba0;
+  font-size: 13px;
+}
+
+.videoFrameStages span.active {
+  background: #eaf3ff;
+  color: #1769e0;
+  font-weight: 700;
+}
+
+.videoFrameOutputInfo {
+  padding-top: 14px;
+  border-top: 1px solid #dce7f2;
+}
+
+.videoFrameOutputInfo h3 {
+  margin-bottom: 10px;
+}
+
+.videoFrameOutputInfo dl {
+  grid-template-columns: 1fr;
+}
+
+.videoFrameStatus {
+  margin-top: auto;
+  padding: 12px;
+  border-radius: 7px;
+  background: #f3f7fb;
+}
+
 .errorBanner,
 .notice {
   margin-bottom: 16px;
@@ -1944,6 +2256,10 @@ td:last-child {
 }
 
 @media (max-width: 1240px) {
+  .videoFrameGrid {
+    grid-template-columns: 1fr;
+  }
+
   .couponGrid {
     grid-template-columns: 1fr;
   }
@@ -2052,6 +2368,18 @@ td:last-child {
 }
 
 @media (max-width: 680px) {
+  .videoFramePanel {
+    padding: 16px;
+  }
+
+  .videoFrameMetadata {
+    grid-template-columns: 1fr;
+  }
+
+  .videoFrameStages {
+    grid-template-columns: 1fr;
+  }
+
   .shopsHero {
     flex-direction: column;
   }

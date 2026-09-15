@@ -161,7 +161,7 @@ export function App() {
         ) : page === 'newcomerGift' ? (
           <NewcomerGiftWorkbench currentShop={currentShop} shops={shops} />
         ) : page === 'videoFrameExtraction' ? (
-          <VideoFrameExtractionPlaceholder />
+          <VideoFrameRateWorkbench />
         ) : (
           <CouponWorkbench currentShop={currentShop} shops={shops} />
         )}
@@ -170,15 +170,172 @@ export function App() {
   );
 }
 
-function VideoFrameExtractionPlaceholder() {
+type VideoProcessingState = 'idle' | 'reading' | 'encoding' | 'complete';
+type VideoMetadata = {
+  duration: number;
+  height: number;
+  width: number;
+};
+
+export function VideoFrameRateWorkbench() {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const timersRef = useRef<number[]>([]);
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [metadata, setMetadata] = useState<VideoMetadata | null>(null);
+  const [targetFps, setTargetFps] = useState(15);
+  const [processingState, setProcessingState] = useState<VideoProcessingState>('idle');
+
+  useEffect(() => () => {
+    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
+    timersRef.current.forEach((timer) => window.clearTimeout(timer));
+  }, [sourceUrl]);
+
+  function chooseVideo(file: File | undefined) {
+    if (!file) return;
+    setSourceFile(file);
+    setSourceUrl(URL.createObjectURL(file));
+    setMetadata(null);
+    setProcessingState('idle');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function startProcessing() {
+    if (!sourceFile) return;
+    timersRef.current.forEach((timer) => window.clearTimeout(timer));
+    setProcessingState('reading');
+    timersRef.current = [
+      window.setTimeout(() => setProcessingState('encoding'), 700),
+      window.setTimeout(() => setProcessingState('complete'), 1400)
+    ];
+  }
+
+  const progress = processingState === 'reading' ? 20 : processingState === 'encoding' ? 65 : processingState === 'complete' ? 100 : 0;
+  const status = processingState === 'reading'
+    ? '正在读取视频'
+    : processingState === 'encoding'
+      ? '正在重新编码'
+      : processingState === 'complete'
+        ? '处理完成'
+        : '等待开始处理';
+  const outputName = sourceFile ? `${sourceFile.name.replace(/\.[^.]+$/, '')}_${targetFps}fps.mp4` : '处理后视频.mp4';
+
   return (
-    <div className="pageHeader">
-      <div>
-        <h1>视频抽帧</h1>
-        <p>视频导入、抽帧和导出功能即将推出。</p>
+    <>
+      <div className="pageHeader">
+        <div>
+          <h1>视频抽帧</h1>
+          <p>降低视频帧率，保留原时长和原声音。</p>
+        </div>
       </div>
-    </div>
+
+      <section className="videoFrameGrid" aria-label="视频抽帧工作区">
+        <section className="videoFramePanel videoFrameSourcePanel" aria-labelledby="video-source-title">
+          <h2 id="video-source-title">源视频与参数</h2>
+          <div className="videoFrameUpload">
+            <strong>导入本地视频</strong>
+            <span>支持 MP4</span>
+            <button onClick={() => fileInputRef.current?.click()} type="button">选择视频</button>
+            <input
+              ref={fileInputRef}
+              accept="video/mp4"
+              className="hiddenInput"
+              onChange={(event) => chooseVideo(event.target.files?.[0])}
+              type="file"
+            />
+          </div>
+
+          <div className="videoFrameFileRow">
+            <span>源文件</span>
+            <strong>{sourceFile?.name ?? '未选择视频'}</strong>
+          </div>
+          <video
+            className="videoFramePlayer"
+            controls
+            onLoadedMetadata={(event) => setMetadata({
+              duration: event.currentTarget.duration,
+              height: event.currentTarget.videoHeight,
+              width: event.currentTarget.videoWidth
+            })}
+            src={sourceUrl || undefined}
+          />
+
+          <dl className="videoFrameMetadata">
+            <div><dt>视频时长</dt><dd>{metadata ? formatVideoDuration(metadata.duration) : '—'}</dd></div>
+            <div><dt>文件大小</dt><dd>{sourceFile ? formatFileSize(sourceFile.size) : '—'}</dd></div>
+            <div><dt>视频分辨率</dt><dd>{metadata ? `${metadata.width} × ${metadata.height}` : '—'}</dd></div>
+            <div><dt>原始帧率</dt><dd>加载后识别</dd></div>
+          </dl>
+
+          <div className="videoFrameSettings">
+            <h3>抽帧设置</h3>
+            <label className="videoFrameFpsField">
+              <span>目标帧率</span>
+              <input
+                aria-label="目标帧率"
+                max={60}
+                min={1}
+                onChange={(event) => setTargetFps(Math.max(1, Math.min(60, Number(event.target.value) || 1)))}
+                type="number"
+                value={targetFps}
+              />
+              <b>FPS</b>
+            </label>
+            <div className="videoFrameOutputSelect">输出：MP4 · 保留原声</div>
+            <p>视频播放速度保持不变</p>
+            <button className="primaryButton videoFrameStartButton" disabled={!sourceFile || processingState === 'reading' || processingState === 'encoding'} onClick={startProcessing} type="button">
+              {processingState === 'reading' || processingState === 'encoding' ? '处理中…' : '开始处理'}
+            </button>
+          </div>
+        </section>
+
+        <section className="videoFramePanel videoFrameOutputPanel" aria-labelledby="video-output-title">
+          <header className="videoFramePanelHeader">
+            <h2 id="video-output-title">输出视频</h2>
+            {processingState === 'complete' && sourceUrl ? (
+              <a className="videoFrameDownloadButton" download={outputName} href={sourceUrl}>下载视频</a>
+            ) : <button disabled type="button">下载视频</button>}
+          </header>
+          <div className="videoFrameOutputPreview">
+            <video className="videoFramePlayer" controls src={processingState === 'complete' ? sourceUrl : undefined} />
+            {processingState !== 'complete' ? <span>处理完成后，新视频将在这里预览</span> : null}
+          </div>
+
+          <section className="videoFrameProgress" aria-live="polite" aria-label="处理进度">
+            <div className="videoFrameProgressTitle"><strong>处理进度</strong><b>{progress}%</b></div>
+            <div className="videoFrameProgressTrack"><i style={{ width: `${progress}%` }} /></div>
+            <p>{status}</p>
+            <div className="videoFrameStages">
+              {['读取视频', '重新编码', '生成 MP4'].map((stage, index) => {
+                const active = progress >= [20, 65, 100][index];
+                return <span className={active ? 'active' : ''} key={stage}>{stage}</span>;
+              })}
+            </div>
+          </section>
+
+          <section className="videoFrameOutputInfo" aria-label="输出信息">
+            <h3>输出信息</h3>
+            <dl>
+              <div><dt>输出时长</dt><dd>{processingState === 'complete' && metadata ? formatVideoDuration(metadata.duration) : '—'}</dd></div>
+              <div><dt>输出帧率</dt><dd>{processingState === 'complete' ? `${targetFps} FPS` : '—'}</dd></div>
+              <div><dt>输出大小</dt><dd>{processingState === 'complete' && sourceFile ? formatFileSize(sourceFile.size) : '—'}</dd></div>
+            </dl>
+          </section>
+          <footer className="videoFrameStatus">{processingState === 'complete' ? '处理完成后可下载到本地' : `状态：${status}`}</footer>
+        </section>
+      </section>
+    </>
   );
+}
+
+function formatFileSize(size: number) {
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function formatVideoDuration(seconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(seconds));
+  return [Math.floor(totalSeconds / 60), totalSeconds % 60].map((part) => String(part).padStart(2, '0')).join(':');
 }
 
 function NavGroup(props: {
