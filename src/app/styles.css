@@ -541,11 +541,19 @@ button:disabled {
 
 .videoFramePlayer {
   width: 100%;
-  height: clamp(122px, 19vh, 178px);
+  height: 100%;
   display: block;
-  border-radius: 8px;
-  background: #161d27;
+  border-radius: inherit;
+  background: transparent;
   object-fit: contain;
+}
+
+.videoFramePreview {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border-radius: 9px;
+  background: #161d27;
 }
 
 .videoFrameMetadata,
@@ -666,14 +674,6 @@ button:disabled {
   padding: 0 12px;
   font-size: 14px;
   text-decoration: none;
-}
-
-.videoFrameOutputPreview {
-  position: relative;
-}
-
-.videoFrameOutputPreview .videoFramePlayer {
-  height: clamp(180px, 29vh, 278px);
 }
 
 .videoFrameOutputPreview span {

@@ -51,4 +51,12 @@ describe('应用侧边栏', () => {
     expect(markup).toContain('shopsWorkspace');
     expect(markup).toContain('workspaceBreadcrumb');
   });
+
+  it('renders separated source and output video cards', () => {
+    const markup = renderToStaticMarkup(<VideoFrameRateWorkbench />);
+
+    expect(markup).toContain('videoFrameSourceCard');
+    expect(markup).toContain('videoFrameOutputCard');
+    expect(markup).toContain('videoFramePreview');
+  });
 });

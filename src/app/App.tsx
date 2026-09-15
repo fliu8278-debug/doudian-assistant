@@ -334,7 +334,7 @@ export function VideoFrameRateWorkbench() {
       </div>
 
       <section className="videoFrameGrid" aria-label="视频抽帧工作区">
-        <section className="videoFramePanel videoFrameSourcePanel" aria-labelledby="video-source-title">
+        <section className="workspaceCard videoFramePanel videoFrameSourcePanel videoFrameSourceCard" aria-labelledby="video-source-title">
           <h2 id="video-source-title">源视频与参数</h2>
           <div className="videoFrameUpload">
             <strong>导入本地视频</strong>
@@ -353,16 +353,18 @@ export function VideoFrameRateWorkbench() {
             <span>源文件</span>
             <strong>{sourceFile?.name ?? '未选择视频'}</strong>
           </div>
-          <video
-            className="videoFramePlayer"
-            controls
-            onLoadedMetadata={(event) => setMetadata({
-              duration: event.currentTarget.duration,
-              height: event.currentTarget.videoHeight,
-              width: event.currentTarget.videoWidth
-            })}
-            src={sourceUrl || undefined}
-          />
+          <div className="videoFramePreview">
+            <video
+              className="videoFramePlayer"
+              controls
+              onLoadedMetadata={(event) => setMetadata({
+                duration: event.currentTarget.duration,
+                height: event.currentTarget.videoHeight,
+                width: event.currentTarget.videoWidth
+              })}
+              src={sourceUrl || undefined}
+            />
+          </div>
 
           <dl className="videoFrameMetadata">
             <div><dt>视频时长</dt><dd>{metadata ? formatVideoDuration(metadata.duration) : '—'}</dd></div>
@@ -393,14 +395,14 @@ export function VideoFrameRateWorkbench() {
           </div>
         </section>
 
-        <section className="videoFramePanel videoFrameOutputPanel" aria-labelledby="video-output-title">
+        <section className="workspaceCard videoFramePanel videoFrameOutputPanel videoFrameOutputCard" aria-labelledby="video-output-title">
           <header className="videoFramePanelHeader">
             <h2 id="video-output-title">输出视频</h2>
             {processingState === 'complete' && sourceUrl ? (
               <a className="videoFrameDownloadButton" download={outputName} href={sourceUrl}>下载视频</a>
             ) : <button disabled type="button">下载视频</button>}
           </header>
-          <div className="videoFrameOutputPreview">
+          <div className="videoFramePreview videoFrameOutputPreview">
             <video className="videoFramePlayer" controls src={processingState === 'complete' ? sourceUrl : undefined} />
             {processingState !== 'complete' ? <span>处理完成后，新视频将在这里预览</span> : null}
           </div>
