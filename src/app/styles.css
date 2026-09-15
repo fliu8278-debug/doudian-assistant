@@ -269,6 +269,96 @@ button:disabled {
   padding: 30px clamp(22px, 4vw, 64px) 24px;
 }
 
+.workspacePage {
+  width: min(100%, 1480px);
+  margin: 0 auto;
+}
+
+.workspaceBreadcrumb {
+  margin-bottom: 6px;
+  color: #71839a;
+  font-size: 12px;
+}
+
+.workspaceHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.workspaceHeader h1 {
+  margin: 0;
+  color: #1769e0;
+  font-size: 26px;
+  line-height: 1.15;
+}
+
+.workspaceHeader p {
+  margin: 6px 0 0;
+  color: #64768e;
+  font-size: 13px;
+}
+
+.workspaceSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.workspaceSummary div {
+  min-height: 86px;
+  padding: 14px;
+  border: 1px solid #dce6f0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.workspaceSummary span,
+.workspaceEmptyState span {
+  display: block;
+  color: #72839a;
+  font-size: 12px;
+}
+
+.workspaceSummary strong {
+  display: block;
+  margin-top: 8px;
+  color: #243a58;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.workspaceCard {
+  border: 1px solid #dce6f0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.workspaceEmptyState {
+  min-height: 220px;
+  display: grid;
+  place-content: center;
+  gap: 7px;
+  padding: 24px;
+  text-align: center;
+}
+
+.workspaceEmptyState strong {
+  color: #2c435f;
+  font-size: 16px;
+}
+
+.shopsWorkspace .shopsHero,
+.shopsWorkspace .shopStatusStrip,
+.shopsWorkspace .shopRowsPanel {
+  max-width: none;
+  margin-right: 0;
+  margin-left: 0;
+}
+
 .shopsHero {
   max-width: 1480px;
   display: flex;

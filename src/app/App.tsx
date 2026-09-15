@@ -6,7 +6,17 @@ import { normalizeNewcomerGiftRow, validateNewcomerGiftRow } from '../imports/ne
 import { createCouponBatch, createNewcomerGiftBatch, getCouponBatch, getNewcomerGiftBatch, getShops, stopCouponBatch, stopNewcomerGiftBatch } from './api';
 import { ShopList } from './pages/shops/ShopList';
 
-type Page = 'shops' | 'coupon' | 'newcomerGift' | 'videoFrameExtraction';
+type Page =
+  | 'shops'
+  | 'accountStatus'
+  | 'coupon'
+  | 'newcomerGift'
+  | 'productSearch'
+  | 'titleCheck'
+  | 'videoFrameExtraction'
+  | 'tableTemplates'
+  | 'executionRecords'
+  | 'settings';
 type RawImportRow = Record<string, string>;
 type CouponPreviewRow = {
   rowNumber: number;
@@ -86,7 +96,7 @@ export function App() {
           <button className={navClass(page === 'shops')} onClick={() => setPage('shops')}>
             <span>店铺列表</span><b>{shops.length}</b>
           </button>
-          <button className="navItem" onClick={() => setPage('shops')}>账号状态</button>
+          <button className={navClass(page === 'accountStatus')} onClick={() => setPage('accountStatus')}>账号状态</button>
         </NavGroup>
 
         <NavGroup
@@ -112,8 +122,8 @@ export function App() {
         >
           <div className="navParent">商品工具</div>
           <div className="subNav">
-            <button className="subItem">商品搜索</button>
-            <button className="subItem">标题检查</button>
+            <button className={navClass(page === 'productSearch', 'subItem')} onClick={() => setPage('productSearch')}>商品搜索</button>
+            <button className={navClass(page === 'titleCheck', 'subItem')} onClick={() => setPage('titleCheck')}>标题检查</button>
           </div>
         </NavGroup>
 
@@ -139,12 +149,12 @@ export function App() {
           title="记录"
           onToggle={() => setOpenGroups(toggleGroup('records'))}
         >
-          <button className="navItem">表格模板</button>
-          <button className="navItem">执行记录</button>
+          <button className={navClass(page === 'tableTemplates')} onClick={() => setPage('tableTemplates')}>表格模板</button>
+          <button className={navClass(page === 'executionRecords')} onClick={() => setPage('executionRecords')}>执行记录</button>
         </NavGroup>
 
         <div className="sidebarFooter">
-          <button className="navItem">设置</button>
+          <button className={navClass(page === 'settings')} onClick={() => setPage('settings')}>设置</button>
         </div>
       </aside>
 
@@ -158,14 +168,108 @@ export function App() {
             refreshing={refreshingShops}
             refreshedAt={shopsRefreshedAt}
           />
+        ) : page === 'accountStatus' ? (
+          <WorkspacePlaceholder
+            actionLabel="刷新状态"
+            breadcrumb="店铺 / 账号状态"
+            description="集中查看店铺授权与登录状态。"
+            emptyDescription="绑定店铺后，会在这里显示账号状态。"
+            emptyTitle="还没有可查看的账号"
+            summary={[
+              { label: '已登录', value: String(shops.filter((shop) => shop.status === 'active').length) },
+              { label: '需登录', value: String(shops.filter((shop) => shop.status !== 'active').length) },
+              { label: '店铺总数', value: String(shops.length) }
+            ]}
+            title="账号状态"
+          />
         ) : page === 'newcomerGift' ? (
           <NewcomerGiftWorkbench currentShop={currentShop} shops={shops} />
         ) : page === 'videoFrameExtraction' ? (
           <VideoFrameRateWorkbench />
+        ) : page === 'productSearch' ? (
+          <WorkspacePlaceholder
+            actionLabel="开始搜索"
+            breadcrumb="商品 / 商品搜索"
+            description="按关键词定位店铺商品。"
+            emptyDescription="输入商品关键词后，结果会显示在这里。"
+            emptyTitle="还没有搜索结果"
+            summary={[{ label: '今日搜索', value: '0' }, { label: '可查看商品', value: '0' }, { label: '当前店铺', value: currentShop ? '已选择' : '未选择' }]}
+            title="商品搜索"
+          />
+        ) : page === 'titleCheck' ? (
+          <WorkspacePlaceholder
+            actionLabel="检查标题"
+            breadcrumb="商品 / 标题检查"
+            description="检查商品标题的关键词与规范。"
+            emptyDescription="粘贴商品标题后，检查结果会显示在这里。"
+            emptyTitle="还没有检查记录"
+            summary={[{ label: '今日检查', value: '0' }, { label: '通过', value: '0' }, { label: '需修改', value: '0' }]}
+            title="标题检查"
+          />
+        ) : page === 'tableTemplates' ? (
+          <WorkspacePlaceholder
+            actionLabel="下载模板"
+            breadcrumb="记录 / 表格模板"
+            description="下载并管理营销任务的导入表格。"
+            emptyDescription="可在这里下载优惠券和新人礼金模板。"
+            emptyTitle="还没有自定义模板"
+            summary={[{ label: '可用模板', value: '2' }, { label: '最近下载', value: '—' }, { label: '自定义模板', value: '0' }]}
+            title="表格模板"
+          />
+        ) : page === 'executionRecords' ? (
+          <WorkspacePlaceholder
+            actionLabel="刷新记录"
+            breadcrumb="记录 / 执行记录"
+            description="查看营销、商品和视频任务的执行历史。"
+            emptyDescription="开始执行任务后，历史记录会显示在这里。"
+            emptyTitle="还没有执行记录"
+            summary={[{ label: '今日执行', value: '0' }, { label: '已完成', value: '0' }, { label: '执行中', value: '0' }]}
+            title="执行记录"
+          />
+        ) : page === 'settings' ? (
+          <WorkspacePlaceholder
+            actionLabel="保存设置"
+            breadcrumb="设置"
+            description="管理本地工具的基础设置。"
+            emptyDescription="设置项会在这里展示。"
+            emptyTitle="还没有可修改的设置"
+            summary={[{ label: '当前店铺', value: currentShop ? '已选择' : '未选择' }, { label: '本地数据', value: '正常' }, { label: '版本', value: '0.1.0' }]}
+            title="设置"
+          />
         ) : (
           <CouponWorkbench currentShop={currentShop} shops={shops} />
         )}
       </main>
+    </div>
+  );
+}
+
+export function WorkspacePlaceholder(props: {
+  breadcrumb: string;
+  title: string;
+  description: string;
+  actionLabel: string;
+  summary: Array<{ label: string; value: string }>;
+  emptyTitle: string;
+  emptyDescription: string;
+}) {
+  return (
+    <div className="workspacePage">
+      <div className="workspaceBreadcrumb">{props.breadcrumb}</div>
+      <header className="workspaceHeader">
+        <div>
+          <h1>{props.title}</h1>
+          <p>{props.description}</p>
+        </div>
+        <button className="primaryButton" type="button">{props.actionLabel}</button>
+      </header>
+      <section className="workspaceSummary" aria-label={`${props.title}概览`}>
+        {props.summary.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}
+      </section>
+      <section className="workspaceCard workspaceEmptyState">
+        <strong>{props.emptyTitle}</strong>
+        <span>{props.emptyDescription}</span>
+      </section>
     </div>
   );
 }

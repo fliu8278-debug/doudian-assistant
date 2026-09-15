@@ -115,8 +115,9 @@ export function ShopList({ shops, loading, onChanged, refreshing, refreshedAt }:
   }
 
   return (
-    <>
-      <div className="shopsHero">
+    <div className="workspacePage shopsWorkspace">
+      <div className="workspaceBreadcrumb">店铺 / 店铺列表</div>
+      <div className="shopsHero workspaceHeader">
         <div>
           <h1>店铺管理</h1>
           <p>扫码绑定后自动保存登录环境，每个店铺占一行。</p>
@@ -153,7 +154,7 @@ export function ShopList({ shops, loading, onChanged, refreshing, refreshedAt }:
         </div>
       </section>
 
-      <section className="shopRowsPanel">
+      <section className="shopRowsPanel workspaceCard">
         <div className="sectionHeader">
           <div>
             <h2>店铺列表</h2>
@@ -336,7 +337,7 @@ export function ShopList({ shops, loading, onChanged, refreshing, refreshedAt }:
       ) : null}
 
       {message ? <div className="toastMessage">{message}</div> : null}
-    </>
+    </div>
   );
 }
 
