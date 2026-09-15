@@ -325,8 +325,33 @@ button:disabled {
   margin: 0 auto;
 }
 
+.videoFrameMain {
+  height: 100dvh;
+  overflow: hidden;
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+
+.videoFramePage {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.videoFramePage .pageHeader {
+  margin: 0;
+}
+
+.videoFrameGrid {
+  min-height: 0;
+  height: 100%;
+}
+
 .videoFramePanel {
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   padding: 20px;
   border: 1px solid #d6e3f2;
   border-radius: 12px;
@@ -354,7 +379,7 @@ button:disabled {
 }
 
 .videoFrameUpload {
-  min-height: 136px;
+  min-height: clamp(92px, 14vh, 126px);
   display: grid;
   place-items: center;
   align-content: center;
@@ -409,7 +434,7 @@ button:disabled {
 
 .videoFramePlayer {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  height: clamp(146px, 22vh, 210px);
   display: block;
   border-radius: 8px;
   background: #161d27;
@@ -538,6 +563,10 @@ button:disabled {
 
 .videoFrameOutputPreview {
   position: relative;
+}
+
+.videoFrameOutputPreview .videoFramePlayer {
+  height: clamp(210px, 34vh, 340px);
 }
 
 .videoFrameOutputPreview span {
@@ -2256,6 +2285,26 @@ td:last-child {
 }
 
 @media (max-width: 1240px) {
+  .videoFrameMain {
+    height: auto;
+    overflow: visible;
+  }
+
+  .videoFramePage,
+  .videoFrameGrid {
+    height: auto;
+  }
+
+  .videoFramePanel {
+    overflow: visible;
+  }
+
+  .videoFramePlayer,
+  .videoFrameOutputPreview .videoFramePlayer {
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
   .videoFrameGrid {
     grid-template-columns: 1fr;
   }

@@ -21,5 +21,6 @@ describe('应用侧边栏', () => {
     expect(markup).toContain('输出视频');
     expect(markup).toContain('处理进度');
     expect(markup).toContain('下载视频');
+    expect(markup).toContain('videoFramePage');
   });
 });

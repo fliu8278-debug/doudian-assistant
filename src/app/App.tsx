@@ -148,7 +148,7 @@ export function App() {
         </div>
       </aside>
 
-      <main className="main">
+      <main className={page === 'videoFrameExtraction' ? 'main videoFrameMain' : 'main'}>
         {error ? <div className="errorBanner">{error}</div> : null}
         {page === 'shops' ? (
           <ShopList
@@ -221,7 +221,7 @@ export function VideoFrameRateWorkbench() {
   const outputName = sourceFile ? `${sourceFile.name.replace(/\.[^.]+$/, '')}_${targetFps}fps.mp4` : '处理后视频.mp4';
 
   return (
-    <>
+    <div className="videoFramePage">
       <div className="pageHeader">
         <div>
           <h1>视频抽帧</h1>
@@ -324,7 +324,7 @@ export function VideoFrameRateWorkbench() {
           <footer className="videoFrameStatus">{processingState === 'complete' ? '处理完成后可下载到本地' : `状态：${status}`}</footer>
         </section>
       </section>
-    </>
+    </div>
   );
 }
 
