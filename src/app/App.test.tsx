@@ -8,7 +8,6 @@ describe('应用侧边栏', () => {
     const markup = renderToStaticMarkup(<App />);
 
     expect(markup).toContain('视频');
-    expect(markup).toContain('视频工具');
     expect(markup).toContain('视频抽帧');
   });
 
@@ -58,5 +57,12 @@ describe('应用侧边栏', () => {
     expect(markup).toContain('videoFrameSourceCard');
     expect(markup).toContain('videoFrameOutputCard');
     expect(markup).toContain('videoFramePreview');
+  });
+
+  it('uses a flat sidebar navigation instead of collapsible groups', () => {
+    const markup = renderToStaticMarkup(<App />);
+
+    expect(markup).toContain('sidebarNav');
+    expect(markup).not.toContain('navGroupToggle');
   });
 });

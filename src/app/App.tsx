@@ -38,14 +38,6 @@ export function App() {
   const [refreshingShops, setRefreshingShops] = useState(false);
   const [shopsRefreshedAt, setShopsRefreshedAt] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    shop: true,
-    marketing: true,
-    product: true,
-    video: true,
-    records: true
-  });
-
   async function refreshShops() {
     setError('');
     setRefreshingShops(true);
@@ -82,79 +74,32 @@ export function App() {
           </div>
         </div>
 
-        <div className="currentShopBox">
-          <span>当前店铺</span>
-          <strong>{currentShop?.name ?? '未选择店铺'}</strong>
-          <small>{shops.length} 个店铺 · {currentShop?.officialAccountName ?? '未绑定账号'}</small>
-        </div>
-
-        <NavGroup
-          open={openGroups.shop}
-          title="店铺"
-          onToggle={() => setOpenGroups(toggleGroup('shop'))}
-        >
-          <button className={navClass(page === 'shops')} onClick={() => setPage('shops')}>
-            <span>店铺列表</span><b>{shops.length}</b>
-          </button>
-          <button className={navClass(page === 'accountStatus')} onClick={() => setPage('accountStatus')}>账号状态</button>
-        </NavGroup>
-
-        <NavGroup
-          open={openGroups.marketing}
-          title="营销"
-          onToggle={() => setOpenGroups(toggleGroup('marketing'))}
-        >
-          <div className="navParent">营销工具</div>
-          <div className="subNav">
-            <button className={navClass(page === 'coupon', 'subItem')} onClick={() => setPage('coupon')}>
-              建立优惠券
-            </button>
-            <button className={navClass(page === 'newcomerGift', 'subItem')} onClick={() => setPage('newcomerGift')}>
-              建立新人礼金
-            </button>
+        <nav className="sidebarNav" aria-label="主导航">
+          <div className="sidebarNavGroup">
+            <span className="sidebarNavLabel">店铺</span>
+            <button className={navClass(page === 'shops', 'sidebarNavItem')} onClick={() => setPage('shops')} type="button"><i aria-hidden="true">▣</i>店铺列表</button>
+            <button className={navClass(page === 'accountStatus', 'sidebarNavItem')} onClick={() => setPage('accountStatus')} type="button"><i aria-hidden="true">◉</i>账号状态</button>
           </div>
-        </NavGroup>
-
-        <NavGroup
-          open={openGroups.product}
-          title="商品"
-          onToggle={() => setOpenGroups(toggleGroup('product'))}
-        >
-          <div className="navParent">商品工具</div>
-          <div className="subNav">
-            <button className={navClass(page === 'productSearch', 'subItem')} onClick={() => setPage('productSearch')}>商品搜索</button>
-            <button className={navClass(page === 'titleCheck', 'subItem')} onClick={() => setPage('titleCheck')}>标题检查</button>
+          <div className="sidebarNavGroup">
+            <span className="sidebarNavLabel">营销</span>
+            <button className={navClass(page === 'coupon', 'sidebarNavItem')} onClick={() => setPage('coupon')} type="button"><i aria-hidden="true">✦</i>建立优惠券</button>
+            <button className={navClass(page === 'newcomerGift', 'sidebarNavItem')} onClick={() => setPage('newcomerGift')} type="button"><i aria-hidden="true">◌</i>新人礼金</button>
           </div>
-        </NavGroup>
-
-        <NavGroup
-          open={openGroups.video}
-          title="视频"
-          onToggle={() => setOpenGroups(toggleGroup('video'))}
-        >
-          <div className="navParent">视频工具</div>
-          <div className="subNav">
-            <button
-              className={navClass(page === 'videoFrameExtraction', 'subItem')}
-              onClick={() => setPage('videoFrameExtraction')}
-              type="button"
-            >
-              视频抽帧
-            </button>
+          <div className="sidebarNavGroup">
+            <span className="sidebarNavLabel">商品</span>
+            <button className={navClass(page === 'productSearch', 'sidebarNavItem')} onClick={() => setPage('productSearch')} type="button"><i aria-hidden="true">⌕</i>商品搜索</button>
+            <button className={navClass(page === 'titleCheck', 'sidebarNavItem')} onClick={() => setPage('titleCheck')} type="button"><i aria-hidden="true">▤</i>标题检查</button>
           </div>
-        </NavGroup>
-
-        <NavGroup
-          open={openGroups.records}
-          title="记录"
-          onToggle={() => setOpenGroups(toggleGroup('records'))}
-        >
-          <button className={navClass(page === 'tableTemplates')} onClick={() => setPage('tableTemplates')}>表格模板</button>
-          <button className={navClass(page === 'executionRecords')} onClick={() => setPage('executionRecords')}>执行记录</button>
-        </NavGroup>
+          <div className="sidebarNavGroup">
+            <span className="sidebarNavLabel">视频</span>
+            <button className={navClass(page === 'videoFrameExtraction', 'sidebarNavItem')} onClick={() => setPage('videoFrameExtraction')} type="button"><i aria-hidden="true">▸</i>视频抽帧</button>
+          </div>
+        </nav>
 
         <div className="sidebarFooter">
-          <button className={navClass(page === 'settings')} onClick={() => setPage('settings')}>设置</button>
+          <button className={navClass(page === 'tableTemplates', 'sidebarNavItem')} onClick={() => setPage('tableTemplates')} type="button"><i aria-hidden="true">▤</i>表格模板</button>
+          <button className={navClass(page === 'executionRecords', 'sidebarNavItem')} onClick={() => setPage('executionRecords')} type="button"><i aria-hidden="true">◷</i>执行记录</button>
+          <button className={navClass(page === 'settings', 'sidebarNavItem')} onClick={() => setPage('settings')} type="button"><i aria-hidden="true">⚙</i>设置</button>
         </div>
       </aside>
 
@@ -442,35 +387,6 @@ function formatFileSize(size: number) {
 function formatVideoDuration(seconds: number) {
   const totalSeconds = Math.max(0, Math.floor(seconds));
   return [Math.floor(totalSeconds / 60), totalSeconds % 60].map((part) => String(part).padStart(2, '0')).join(':');
-}
-
-function NavGroup(props: {
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="navGroup">
-      <button
-        aria-expanded={props.open}
-        className="navGroupToggle"
-        onClick={props.onToggle}
-        type="button"
-      >
-        <span>{props.title}</span>
-        <i className={props.open ? 'groupChevron open' : 'groupChevron'} aria-hidden="true" />
-      </button>
-      {props.open ? <div className="navStack">{props.children}</div> : null}
-    </section>
-  );
-}
-
-function toggleGroup(key: string) {
-  return (current: Record<string, boolean>) => ({
-    ...current,
-    [key]: !current[key]
-  });
 }
 
 function navClass(active: boolean, base = 'navItem') {

@@ -55,7 +55,7 @@ button:disabled {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 236px minmax(0, 1fr);
+  grid-template-columns: 194px minmax(0, 1fr);
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
@@ -64,9 +64,9 @@ button:disabled {
 .sidebar {
   display: flex;
   flex-direction: column;
-  padding: 22px 18px;
+  padding: 22px 10px;
   border-right: 1px solid #d5e0ec;
-  background: #f3f7fb;
+  background: #f6f8fc;
   min-height: 0;
   overflow-y: auto;
 }
@@ -75,12 +75,12 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 18px;
+  margin: 0 6px 24px;
 }
 
 .brandMark {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   border-radius: 10px;
@@ -100,164 +100,67 @@ button:disabled {
   font-size: 12px;
 }
 
-.currentShopBox {
-  padding: 12px 13px;
-  margin-bottom: 20px;
-  border: 1px solid #dce6f0;
-  border-radius: 10px;
-  background: #fff;
+.sidebarNav {
+  display: grid;
+  gap: 16px;
 }
 
-.currentShopBox span,
-.currentShopBox small {
-  display: block;
-  color: #6b7a90;
-  font-size: 12px;
+.sidebarNavGroup {
+  display: grid;
+  gap: 3px;
 }
 
-.currentShopBox strong {
-  display: block;
-  margin: 5px 0;
-  overflow: hidden;
-  font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.navGroup {
-  margin-bottom: 10px;
-}
-
-.navGroupToggle {
-  width: 100%;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: #73849a;
-  padding: 0 4px 0 2px;
-  font-size: 12px;
+.sidebarNavLabel {
+  padding: 0 10px 4px;
+  color: #8291a4;
+  font-size: 11px;
   font-weight: 700;
-  text-align: left;
 }
 
-.navGroupToggle:hover {
-  background: #edf4fb;
-}
-
-.groupChevron {
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  margin-right: 0;
-  border-radius: 999px;
-  background: #eaf1f8;
-}
-
-.groupChevron::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid #6d8097;
-  border-bottom: 1.5px solid #6d8097;
-  border-radius: 1px;
-  transform: rotate(-45deg);
-}
-
-.groupChevron.open::before {
-  transform: translateY(-1px) rotate(45deg);
-}
-
-.navStack {
-  display: grid;
-  gap: 5px;
-  margin-top: 4px;
-}
-
-.navItem,
-.navParent,
-.subItem {
+.sidebarNavItem {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   width: 100%;
-  min-height: 36px;
+  min-height: 38px;
   border: 0;
+  border-radius: 8px;
   background: transparent;
-  color: #44546a;
+  color: #52657d;
+  padding: 0 10px;
   font-size: 13px;
   text-align: left;
 }
 
-.navItem,
-.navParent {
-  border-radius: 8px;
-  padding: 0 10px;
-}
-
-.navItem b {
-  min-width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: #eef4ff;
-  color: #1769e0;
-  font-size: 12px;
-}
-
-.navItem:hover,
-.subItem:hover {
+.sidebarNavItem:hover {
   background: #edf4fb;
 }
 
-.active {
-  border: 1px solid #d7e5f8;
-  color: #0d58c8;
-  background: #fff;
+.sidebarNavItem i {
+  width: 18px;
+  color: #61748c;
+  font-size: 15px;
+  font-style: normal;
+  text-align: center;
+}
+
+.sidebarNavItem.active {
+  border: 0;
+  color: #1769e0;
+  background: #dce9fd;
   font-weight: 600;
 }
 
-.active::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 3px;
-  border-radius: 999px;
-  background: #1769e0;
-}
-
-.navParent {
-  color: #233851;
-  font-weight: 600;
-}
-
-.subNav {
-  display: grid;
-  gap: 3px;
-  margin: 4px 0 10px 12px;
-  padding-left: 14px;
-  border-left: 1px solid #d2deea;
-}
-
-.subItem {
-  min-height: 32px;
-  border-radius: 7px;
-  padding: 0 10px;
-  color: #5a6a7f;
-  font-size: 13px;
+.sidebarNavItem.active i {
+  color: #1769e0;
 }
 
 .sidebarFooter {
+  display: grid;
+  gap: 3px;
   margin-top: auto;
-  padding-top: 16px;
+  padding-top: 14px;
   border-top: 1px solid rgba(190, 203, 219, 0.72);
 }
 
