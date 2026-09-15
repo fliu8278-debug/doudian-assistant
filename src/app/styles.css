@@ -333,7 +333,8 @@ button:disabled {
   display: grid;
   grid-template-columns: minmax(320px, 0.82fr) minmax(460px, 1.18fr);
   gap: 12px;
-  width: 100%;
+  width: calc(100% - 48px);
+  margin: 0 auto;
 }
 
 .videoFrameMain {
