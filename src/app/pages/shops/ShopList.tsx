@@ -119,8 +119,8 @@ export function ShopList({ shops, loading, onChanged, refreshing, refreshedAt }:
       <div className="workspaceBreadcrumb">店铺 / 店铺列表</div>
       <div className="shopsHero workspaceHeader">
         <div>
-          <h1>店铺管理</h1>
-          <p>扫码绑定后自动保存登录环境，每个店铺占一行。</p>
+          <h1>店铺列表</h1>
+          <p>查看已授权店铺，并管理日常运营工具。</p>
         </div>
         <div className="heroActions">
           <button disabled={!currentShop || syncing || refreshing} onClick={() => currentShop ? void syncFromDoudian(currentShop) : undefined}>
@@ -132,27 +132,46 @@ export function ShopList({ shops, loading, onChanged, refreshing, refreshedAt }:
         </div>
       </div>
 
-      <section className="shopStatusStrip" aria-label="店铺状态概览">
-        <div>
-          <span className="liveLabel">
-            <i aria-hidden="true" />
-            {syncing ? '正在同步抖店' : `已更新 ${refreshedAt ? formatClock(refreshedAt) : '--'}`}
-          </span>
-          <strong>{currentShop?.name ?? '未绑定'}</strong>
-        </div>
-        <div>
-          <span>店铺总数</span>
-          <strong>{shops.length}</strong>
-        </div>
-        <div>
-          <span>已登录</span>
-          <strong>{activeCount}</strong>
-        </div>
-        <div>
-          <span>需处理</span>
-          <strong>{abnormalCount}</strong>
-        </div>
-      </section>
+      <div className="shopDashboardGrid">
+        <section className="shopOverviewCard workspaceCard" aria-label="店铺状态概览">
+          <div className="sectionHeader">
+            <div>
+              <h2>店铺概览</h2>
+              <p>{syncing ? '正在同步抖店数据' : `已更新 ${refreshedAt ? formatClock(refreshedAt) : '--'}`}</p>
+            </div>
+          </div>
+          <div className="shopStatusStrip">
+            <div>
+              <span>当前店铺</span>
+              <strong>{currentShop?.name ?? '未绑定'}</strong>
+            </div>
+            <div>
+              <span>店铺总数</span>
+              <strong>{shops.length}</strong>
+            </div>
+            <div>
+              <span>已登录</span>
+              <strong>{activeCount}</strong>
+            </div>
+            <div>
+              <span>需处理</span>
+              <strong>{abnormalCount}</strong>
+            </div>
+          </div>
+        </section>
+
+        <aside className="shopQuickTools workspaceCard">
+          <div className="sectionHeader">
+            <div>
+              <h2>常用工具</h2>
+              <p>从当前店铺直接进入处理流程。</p>
+            </div>
+          </div>
+          <button type="button"><i aria-hidden="true">券</i><span>建立优惠券<small>创建营销活动</small></span></button>
+          <button type="button"><i aria-hidden="true">搜</i><span>商品搜索<small>定位商品信息</small></span></button>
+          <button type="button"><i aria-hidden="true">视</i><span>视频抽帧<small>降低帧率并导出视频</small></span></button>
+        </aside>
+      </div>
 
       <section className="shopRowsPanel workspaceCard">
         <div className="sectionHeader">

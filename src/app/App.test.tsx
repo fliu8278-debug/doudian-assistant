@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import * as AppModule from './App';
 import { App, VideoFrameRateWorkbench } from './App';
+import { ShopList } from './pages/shops/ShopList';
 
 describe('应用侧边栏', () => {
   it('显示视频抽帧入口', () => {
@@ -64,5 +65,14 @@ describe('应用侧边栏', () => {
 
     expect(markup).toContain('sidebarNav');
     expect(markup).not.toContain('navGroupToggle');
+  });
+
+  it('renders the shop overview and quick tools as separate dashboard cards', () => {
+    const markup = renderToStaticMarkup(
+      <ShopList loading={false} onChanged={async () => undefined} refreshedAt={null} refreshing={false} shops={[]} />
+    );
+
+    expect(markup).toContain('shopDashboardGrid');
+    expect(markup).toContain('shopQuickTools');
   });
 });

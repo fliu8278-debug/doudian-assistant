@@ -1011,32 +1011,23 @@ button:disabled {
 }
 
 .shopStatusStrip {
-  max-width: 1480px;
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) repeat(3, minmax(110px, 150px));
-  gap: 10px;
-  margin-right: auto;
-  margin-bottom: 18px;
-  margin-left: auto;
-  padding: 10px;
-  border: 1px solid #d9e2ec;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 18px 50px rgba(73, 91, 112, 0.1);
+  grid-template-columns: minmax(150px, 1.35fr) repeat(3, minmax(90px, 1fr));
+  gap: 8px;
 }
 
 .shopStatusStrip div {
-  min-height: 72px;
+  min-height: 88px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: #fbfdff;
+  padding: 13px;
+  border-radius: 9px;
+  background: #f5f8fc;
 }
 
 .shopStatusStrip div:first-child {
-  background: linear-gradient(90deg, #f8fbff, #eef7f4);
+  background: #edf7f4;
 }
 
 .shopStatusStrip span {
@@ -1044,30 +1035,84 @@ button:disabled {
   font-size: 12px;
 }
 
-.liveLabel {
-  display: inline-flex !important;
-  align-items: center;
-  gap: 7px;
-}
-
-.liveLabel i {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: #16a166;
-  box-shadow: 0 0 0 4px rgba(22, 161, 102, 0.12);
-  animation: liveDot 1.4s ease-in-out infinite;
-}
-
 .shopStatusStrip strong {
   display: block;
   margin-top: 5px;
   overflow: hidden;
-  color: #06243f;
-  font-size: 22px;
+  color: #284767;
+  font-size: 20px;
   line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.shopDashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(270px, 0.7fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.shopOverviewCard,
+.shopQuickTools {
+  padding: 16px;
+}
+
+.shopOverviewCard .sectionHeader,
+.shopQuickTools .sectionHeader {
+  margin-bottom: 12px;
+}
+
+.shopQuickTools {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.shopQuickTools .sectionHeader {
+  margin-bottom: 2px;
+}
+
+.shopQuickTools button {
+  height: auto;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 9px;
+  background: #f5f8fc;
+  color: #405872;
+  padding: 9px;
+  text-align: left;
+}
+
+.shopQuickTools button:hover {
+  background: #eaf2fb;
+}
+
+.shopQuickTools button i {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 7px;
+  background: #dfeafe;
+  color: #1769e0;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.shopQuickTools button span,
+.shopQuickTools button small {
+  display: block;
+}
+
+.shopQuickTools button small {
+  margin-top: 3px;
+  color: #788aa0;
+  font-size: 11px;
 }
 
 .shopOverview {
@@ -1225,6 +1270,10 @@ button:disabled {
   margin-right: auto;
   margin-left: auto;
   overflow: hidden;
+}
+
+.shopRowsPanel.workspaceCard {
+  padding: 16px;
 }
 
 .sectionHeader {
