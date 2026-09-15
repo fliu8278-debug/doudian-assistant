@@ -1,0 +1,8 @@
+node_modules/
+dist/
+build/
+release/
+data/
+outputs/
+tmp-*.ts
+.superpowers/
