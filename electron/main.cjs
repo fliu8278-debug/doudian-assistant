@@ -1,6 +1,8 @@
 const { app, BrowserWindow, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const net = require('node:net');
 const path = require('node:path');
+const { startAutoUpdater } = require('./updater.cjs');
 
 let mainWindow;
 let backendServer;
@@ -36,6 +38,9 @@ async function startApp() {
   process.env.DOUDIAN_TOOL_DATA_DIR ||= app.isPackaged
     ? path.join(app.getPath('userData'), 'data')
     : path.join(process.cwd(), 'data');
+  process.env.DOUDIAN_FFMPEG_PATH ||= app.isPackaged
+    ? path.join(process.resourcesPath, 'ffmpeg', 'win32-x64', 'ffmpeg.exe')
+    : path.join(process.cwd(), 'vendor', 'ffmpeg', 'win32-x64', 'ffmpeg.exe');
   const staticDir = path.join(__dirname, '..', 'dist');
   const port = await findAvailablePort(4173);
   const { startServer } = require(path.join(__dirname, '..', 'build', 'server', 'index.cjs'));
@@ -43,6 +48,12 @@ async function startApp() {
 
   backendServer = started.server;
   createWindow(started.url);
+  startAutoUpdater({
+    app,
+    autoUpdater,
+    dialog,
+    getWindow: () => mainWindow
+  });
 }
 
 function createWindow(url) {

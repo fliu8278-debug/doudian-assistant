@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fliu8278-debug/doudian-assistant.git"
+  },
   "main": "electron/main.cjs",
   "engines": {
     "node": ">=24"
@@ -15,13 +19,16 @@
     "typecheck": "tsc --noEmit",
     "build:server": "esbuild src/server/app.ts --bundle --platform=node --target=node24 --format=cjs --packages=external --outfile=build/server/index.cjs",
     "build": "npm run typecheck && vite build && npm run build:server",
+    "prepare:ffmpeg": "node scripts/download-ffmpeg.mjs",
     "app": "npm run build && electron .",
-    "dist:win": "npm run build && electron-builder --win nsis --x64"
+    "dist:win": "npm run prepare:ffmpeg && npm run build && electron-builder --win nsis --x64 --publish never",
+    "release:win": "npm run prepare:ffmpeg && npm run build && electron-builder --win nsis --x64 --publish always"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.2",
     "concurrently": "^9.2.1",
     "cors": "^2.8.5",
+    "electron-updater": "^6.8.9",
     "express": "^5.1.0",
     "multer": "^2.0.2",
     "playwright": "^1.55.0",
@@ -56,11 +63,24 @@
       "electron/**/*",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "vendor/ffmpeg/win32-x64",
+        "to": "ffmpeg/win32-x64"
+      }
+    ],
     "asar": true,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "fliu8278-debug",
+        "repo": "doudian-assistant-releases",
+        "releaseType": "release"
+      }
+    ],
     "win": {
-      "target": [
-        "nsis"
-      ]
+      "target": ["nsis"],
+      "verifyUpdateCodeSignature": true
     },
     "nsis": {
       "oneClick": false,
