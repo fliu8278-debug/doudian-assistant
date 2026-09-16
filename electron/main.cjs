@@ -1,11 +1,12 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const net = require('node:net');
 const path = require('node:path');
-const { startAutoUpdater } = require('./updater.cjs');
+const { registerAutoUpdaterIpc, startAutoUpdater } = require('./updater.cjs');
 
 let mainWindow;
 let backendServer;
+let updater;
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -48,12 +49,12 @@ async function startApp() {
 
   backendServer = started.server;
   createWindow(started.url);
-  startAutoUpdater({
+  updater = startAutoUpdater({
     app,
     autoUpdater,
-    dialog,
-    getWindow: () => mainWindow
+    broadcast: (state) => mainWindow?.webContents.send('updater:state', state)
   });
+  registerAutoUpdaterIpc({ ipcMain, coordinator: updater });
 }
 
 function createWindow(url) {
@@ -67,7 +68,8 @@ function createWindow(url) {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      preload: path.join(__dirname, 'preload.cjs')
     }
   });
 

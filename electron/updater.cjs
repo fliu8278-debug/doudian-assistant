@@ -34,8 +34,9 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
   const restart = () => {
     if (state.phase === 'ready') autoUpdater.quitAndInstall();
   };
+  const setBackground = (enabled) => publish({ backgroundEnabled: Boolean(enabled) });
 
-  if (!app.isPackaged) return { check, download, getState: () => state, restart };
+  if (!app.isPackaged) return { check, download, getState: () => state, restart, setBackground };
 
   autoUpdater.autoDownload = false;
   autoUpdater.on('checking-for-update', () => publish({ phase: 'checking', error: undefined }));
@@ -63,7 +64,18 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
   });
   void check();
 
-  return { check, download, getState: () => state, restart };
+  return { check, download, getState: () => state, restart, setBackground };
 }
 
-module.exports = { startAutoUpdater };
+function registerAutoUpdaterIpc({ ipcMain, coordinator }) {
+  ipcMain.handle('updater:get-state', () => coordinator.getState());
+  ipcMain.handle('updater:check', () => coordinator.check());
+  ipcMain.handle('updater:download', () => coordinator.download());
+  ipcMain.handle('updater:restart', () => {
+    coordinator.restart();
+    return coordinator.getState();
+  });
+  ipcMain.handle('updater:set-background', (_event, enabled) => coordinator.setBackground(enabled));
+}
+
+module.exports = { registerAutoUpdaterIpc, startAutoUpdater };

@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi } from 'vitest';
-import { startAutoUpdater } from './updater.cjs';
+import { registerAutoUpdaterIpc, startAutoUpdater } from './updater.cjs';
 
 function createUpdater() {
   const updater = new EventEmitter();
@@ -51,5 +51,24 @@ describe('startAutoUpdater', () => {
     coordinator.restart();
 
     expect(autoUpdater.quitAndInstall).toHaveBeenCalledOnce();
+  });
+
+  it('只注册页面所需的更新控制通道', async () => {
+    const ipcMain = { handle: vi.fn() };
+    const coordinator = startAutoUpdater({
+      app: { isPackaged: false, getVersion: () => '0.1.1' },
+      autoUpdater: createUpdater(),
+      log: { error: vi.fn() }
+    });
+
+    registerAutoUpdaterIpc({ ipcMain, coordinator });
+
+    expect(ipcMain.handle).toHaveBeenCalledWith('updater:get-state', expect.any(Function));
+    expect(ipcMain.handle).toHaveBeenCalledWith('updater:check', expect.any(Function));
+    expect(ipcMain.handle).toHaveBeenCalledWith('updater:download', expect.any(Function));
+    expect(ipcMain.handle).toHaveBeenCalledWith('updater:restart', expect.any(Function));
+    expect(ipcMain.handle).toHaveBeenCalledWith('updater:set-background', expect.any(Function));
+    const getState = ipcMain.handle.mock.calls.find(([channel]) => channel === 'updater:get-state')[1];
+    expect(getState()).toMatchObject({ phase: 'idle', currentVersion: '0.1.1' });
   });
 });
