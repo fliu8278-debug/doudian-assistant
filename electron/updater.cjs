@@ -66,7 +66,7 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
     publish({
       phase: 'available',
       version: info.version,
-      releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : undefined,
+      releaseNotes: plainReleaseNotes(info.releaseNotes),
       releaseUrl
     });
     if (state.backgroundEnabled) void download();
@@ -81,13 +81,13 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
   autoUpdater.on('update-downloaded', (info) => publish({
     phase: 'ready',
     version: info.version ?? state.version,
-    releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : state.releaseNotes
+    releaseNotes: plainReleaseNotes(info.releaseNotes) ?? state.releaseNotes
   }));
   autoUpdater.on('update-downloaded', (info) => saveSettings(settingsPath, {
     ...settings,
     backgroundEnabled: state.backgroundEnabled,
     lastRunVersion: currentVersion,
-    pendingReleaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : state.releaseNotes,
+    pendingReleaseNotes: plainReleaseNotes(info.releaseNotes) ?? state.releaseNotes,
     pendingVersion: info.version ?? state.version
   }));
   autoUpdater.on('error', (error) => {
@@ -112,6 +112,20 @@ function registerAutoUpdaterIpc({ ipcMain, coordinator }) {
 }
 
 module.exports = { registerAutoUpdaterIpc, startAutoUpdater };
+
+function plainReleaseNotes(notes) {
+  if (typeof notes !== 'string') return undefined;
+  return notes
+    .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+    .replace(/<\s*li[^>]*>/gi, '\n• ')
+    .replace(/<\/(?:p|div|h[1-6]|li|ul|ol)\s*>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(amp|lt|gt|quot|#39);/g, (_match, entity) => ({ amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" })[entity])
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n');
+}
 
 function readSettings(settingsPath) {
   if (!settingsPath || !existsSync(settingsPath)) return { backgroundEnabled: false };

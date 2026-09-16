@@ -36,7 +36,15 @@ jobs:
           }
       - name: Create draft release
         shell: pwsh
-        run: gh release create "$env:GITHUB_REF_NAME" --repo fliu8278-debug/doudian-assistant-releases --draft --title "抖店助手 $env:GITHUB_REF_NAME" --generate-notes
+        run: |
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          $lines = Get-Content CHANGELOG.md
+          $start = [Array]::FindIndex([string[]]$lines, [Predicate[string]] { param($line) $line -eq "## [$version]" })
+          if ($start -lt 0) { throw "Missing release notes for $version in CHANGELOG.md" }
+          $end = $start + 1
+          while ($end -lt $lines.Count -and $lines[$end] -notmatch '^## ') { $end++ }
+          $lines[($start + 1)..($end - 1)] | Set-Content release-notes.md
+          gh release create "$env:GITHUB_REF_NAME" --repo fliu8278-debug/doudian-assistant-releases --draft --title "抖店助手 $env:GITHUB_REF_NAME" --notes-file release-notes.md
       - run: npm run release:win
       - name: Publish completed release
         shell: pwsh

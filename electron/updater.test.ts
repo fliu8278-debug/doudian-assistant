@@ -83,6 +83,20 @@ describe('startAutoUpdater', () => {
     expect(packageJson.build.win.verifyUpdateCodeSignature).toBe(false);
   });
 
+  it('converts GitHub HTML release notes to readable text', () => {
+    const autoUpdater = createUpdater();
+    const coordinator = startAutoUpdater({
+      app: { isPackaged: true, getVersion: () => '0.1.2' }, autoUpdater, log: { error: vi.fn() }
+    });
+
+    autoUpdater.emit('update-available', {
+      version: '0.1.3',
+      releaseNotes: '<p><strong>Full Changelog</strong>: <a href="https://example.com">https://example.com</a></p>'
+    });
+
+    expect(coordinator.getState().releaseNotes).toBe('Full Changelog: https://example.com');
+  });
+
   it('persists background downloads and opens the release page on demand', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'doudian-updater-test-'));
     const settingsPath = join(directory, 'settings.json');
