@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import type { CouponBatch, CouponRow, NewcomerGiftBatch, NewcomerGiftRow, Shop } from '../shared/types';
 import { normalizeCouponRow, validateCouponBatchTime, validateCouponRow } from '../imports/couponRows';
 import { normalizeNewcomerGiftRow, validateNewcomerGiftRow } from '../imports/newcomerGiftRows';
-import { createCouponBatch, createNewcomerGiftBatch, getCouponBatch, getNewcomerGiftBatch, getShops, stopCouponBatch, stopNewcomerGiftBatch } from './api';
+import { createCouponBatch, createNewcomerGiftBatch, createVideoFrameExtraction, getCouponBatch, getNewcomerGiftBatch, getShops, getVideoFrameExtraction, stopCouponBatch, stopNewcomerGiftBatch, type VideoFrameExtractionJob } from './api';
 import { ShopList } from './pages/shops/ShopList';
 
 type Page =
@@ -219,7 +219,7 @@ export function WorkspacePlaceholder(props: {
   );
 }
 
-type VideoProcessingState = 'idle' | 'reading' | 'encoding' | 'complete';
+type VideoProcessingState = 'idle' | 'processing' | 'complete' | 'failed';
 type VideoMetadata = {
   duration: number;
   height: number;
@@ -228,46 +228,84 @@ type VideoMetadata = {
 
 export function VideoFrameRateWorkbench() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const timersRef = useRef<number[]>([]);
+  const pollTimerRef = useRef<number | null>(null);
+  const requestVersionRef = useRef(0);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [sourceUrl, setSourceUrl] = useState('');
   const [metadata, setMetadata] = useState<VideoMetadata | null>(null);
   const [targetFps, setTargetFps] = useState(15);
   const [processingState, setProcessingState] = useState<VideoProcessingState>('idle');
+  const [job, setJob] = useState<VideoFrameExtractionJob | null>(null);
+  const [processingError, setProcessingError] = useState('');
 
   useEffect(() => () => {
     if (sourceUrl) URL.revokeObjectURL(sourceUrl);
-    timersRef.current.forEach((timer) => window.clearTimeout(timer));
+    if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
   }, [sourceUrl]);
 
   function chooseVideo(file: File | undefined) {
     if (!file) return;
+    requestVersionRef.current += 1;
+    if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
     setSourceFile(file);
     setSourceUrl(URL.createObjectURL(file));
     setMetadata(null);
     setProcessingState('idle');
+    setJob(null);
+    setProcessingError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
-  function startProcessing() {
+  async function startProcessing() {
     if (!sourceFile) return;
-    timersRef.current.forEach((timer) => window.clearTimeout(timer));
-    setProcessingState('reading');
-    timersRef.current = [
-      window.setTimeout(() => setProcessingState('encoding'), 700),
-      window.setTimeout(() => setProcessingState('complete'), 1400)
-    ];
+    const requestVersion = requestVersionRef.current + 1;
+    requestVersionRef.current = requestVersion;
+    if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
+    setProcessingState('processing');
+    setJob(null);
+    setProcessingError('');
+
+    try {
+      const created = await createVideoFrameExtraction(sourceFile, targetFps);
+      if (requestVersion !== requestVersionRef.current) return;
+      setJob(created);
+      void pollJob(created.id, requestVersion);
+    } catch (error) {
+      if (requestVersion !== requestVersionRef.current) return;
+      setProcessingState('failed');
+      setProcessingError(error instanceof Error ? error.message : '视频处理任务创建失败');
+    }
   }
 
-  const progress = processingState === 'reading' ? 20 : processingState === 'encoding' ? 65 : processingState === 'complete' ? 100 : 0;
-  const status = processingState === 'reading'
-    ? '正在读取视频'
-    : processingState === 'encoding'
-      ? '正在重新编码'
-      : processingState === 'complete'
-        ? '处理完成'
+  async function pollJob(jobId: string, requestVersion: number): Promise<void> {
+    try {
+      const nextJob = await getVideoFrameExtraction(jobId);
+      if (requestVersion !== requestVersionRef.current) return;
+      setJob(nextJob);
+      if (nextJob.status === 'complete') {
+        setProcessingState('complete');
+        return;
+      }
+      if (nextJob.status === 'failed') {
+        setProcessingState('failed');
+        setProcessingError(nextJob.error ?? '视频处理失败，请更换视频后重试');
+        return;
+      }
+      pollTimerRef.current = window.setTimeout(() => void pollJob(jobId, requestVersion), 1000);
+    } catch (error) {
+      if (requestVersion !== requestVersionRef.current) return;
+      setProcessingState('failed');
+      setProcessingError(error instanceof Error ? error.message : '无法读取视频处理进度');
+    }
+  }
+
+  const progress = job?.progress ?? (processingState === 'processing' ? 1 : processingState === 'complete' ? 100 : 0);
+  const status = processingState === 'processing'
+    ? progress < 5 ? '正在上传视频' : '正在重新编码'
+    : processingState === 'complete' ? '处理完成'
+      : processingState === 'failed' ? '处理失败'
         : '等待开始处理';
-  const outputName = sourceFile ? `${sourceFile.name.replace(/\.[^.]+$/, '')}_${targetFps}fps.mp4` : '处理后视频.mp4';
+  const outputUrl = processingState === 'complete' ? job?.downloadUrl : undefined;
 
   return (
     <div className="videoFramePage">
@@ -334,8 +372,8 @@ export function VideoFrameRateWorkbench() {
             </label>
             <div className="videoFrameOutputSelect">输出：MP4 · 保留原声</div>
             <p>视频播放速度保持不变</p>
-            <button className="primaryButton videoFrameStartButton" disabled={!sourceFile || processingState === 'reading' || processingState === 'encoding'} onClick={startProcessing} type="button">
-              {processingState === 'reading' || processingState === 'encoding' ? '处理中…' : '开始处理'}
+            <button className="primaryButton videoFrameStartButton" disabled={!sourceFile || processingState === 'processing'} onClick={() => void startProcessing()} type="button">
+              {processingState === 'processing' ? '处理中…' : '开始处理'}
             </button>
           </div>
         </section>
@@ -343,12 +381,12 @@ export function VideoFrameRateWorkbench() {
         <section className="workspaceCard videoFramePanel videoFrameOutputPanel videoFrameOutputCard" aria-labelledby="video-output-title">
           <header className="videoFramePanelHeader">
             <h2 id="video-output-title">输出视频</h2>
-            {processingState === 'complete' && sourceUrl ? (
-              <a className="videoFrameDownloadButton" download={outputName} href={sourceUrl}>下载视频</a>
+            {processingState === 'complete' && outputUrl ? (
+              <a className="videoFrameDownloadButton" download={job?.outputName ?? '处理后视频.mp4'} href={outputUrl}>下载视频</a>
             ) : <button disabled type="button">下载视频</button>}
           </header>
           <div className="videoFramePreview videoFrameOutputPreview">
-            <video className="videoFramePlayer" controls src={processingState === 'complete' ? sourceUrl : undefined} />
+            <video className="videoFramePlayer" controls src={outputUrl} />
             {processingState !== 'complete' ? <span>处理完成后，新视频将在这里预览</span> : null}
           </div>
 
@@ -357,8 +395,8 @@ export function VideoFrameRateWorkbench() {
             <div className="videoFrameProgressTrack"><i style={{ width: `${progress}%` }} /></div>
             <p>{status}</p>
             <div className="videoFrameStages">
-              {['读取视频', '重新编码', '生成 MP4'].map((stage, index) => {
-                const active = progress >= [20, 65, 100][index];
+              {['上传视频', '重新编码', '生成 MP4'].map((stage, index) => {
+                const active = progress >= [1, 5, 100][index];
                 return <span className={active ? 'active' : ''} key={stage}>{stage}</span>;
               })}
             </div>
@@ -367,12 +405,12 @@ export function VideoFrameRateWorkbench() {
           <section className="videoFrameOutputInfo" aria-label="输出信息">
             <h3>输出信息</h3>
             <dl>
-              <div><dt>输出时长</dt><dd>{processingState === 'complete' && metadata ? formatVideoDuration(metadata.duration) : '—'}</dd></div>
+              <div><dt>输出时长</dt><dd>{processingState === 'complete' && job?.duration ? formatVideoDuration(job.duration) : '—'}</dd></div>
               <div><dt>输出帧率</dt><dd>{processingState === 'complete' ? `${targetFps} FPS` : '—'}</dd></div>
-              <div><dt>输出大小</dt><dd>{processingState === 'complete' && sourceFile ? formatFileSize(sourceFile.size) : '—'}</dd></div>
+              <div><dt>输出大小</dt><dd>{processingState === 'complete' && job?.outputSize ? formatFileSize(job.outputSize) : '—'}</dd></div>
             </dl>
           </section>
-          <footer className="videoFrameStatus">{processingState === 'complete' ? '处理完成后可下载到本地' : `状态：${status}`}</footer>
+          <footer className="videoFrameStatus">{processingState === 'complete' ? '处理完成后可下载到本地' : processingError || `状态：${status}`}</footer>
         </section>
       </section>
     </div>

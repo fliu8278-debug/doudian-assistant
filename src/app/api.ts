@@ -1,5 +1,17 @@
 import type { CouponBatch, CouponRow, NewcomerGiftBatch, NewcomerGiftRow, NewShop, Shop, ShopStatus } from '../shared/types';
 
+export type VideoFrameExtractionJob = {
+  id: string;
+  status: 'processing' | 'complete' | 'failed';
+  progress: number;
+  targetFps: number;
+  outputName: string;
+  outputSize?: number;
+  duration?: number;
+  error?: string;
+  downloadUrl?: string;
+};
+
 export async function getShops() {
   const response = await fetch('/api/shops');
   return readJson<Shop[]>(response);
@@ -89,6 +101,22 @@ export async function getNewcomerGiftBatch(batchId: string) {
 export async function stopNewcomerGiftBatch(batchId: string) {
   const response = await fetch(`/api/newcomer-gift-batches/${batchId}/stop`, { method: 'POST' });
   return readJson<NewcomerGiftBatch>(response);
+}
+
+export async function createVideoFrameExtraction(file: File, targetFps: number) {
+  const form = new FormData();
+  form.append('video', file);
+  form.append('targetFps', String(targetFps));
+  const response = await fetch('/api/video-frame-extraction', {
+    method: 'POST',
+    body: form
+  });
+  return readJson<VideoFrameExtractionJob>(response);
+}
+
+export async function getVideoFrameExtraction(jobId: string) {
+  const response = await fetch(`/api/video-frame-extraction/${jobId}`);
+  return readJson<VideoFrameExtractionJob>(response);
 }
 
 async function readJson<T>(response: Response) {
