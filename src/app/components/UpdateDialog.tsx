@@ -4,12 +4,14 @@ type Props = {
   state: UpdateState;
   onCheck(): void;
   onDownload(): void;
+  onOpenRelease(): void;
   onRestart(): void;
 };
 
-export function UpdateDialog({ state, onCheck, onDownload, onRestart }: Props) {
+export function UpdateDialog({ state, onCheck, onDownload, onOpenRelease, onRestart }: Props) {
   const version = state.version ? ` v${state.version}` : '';
-  const title = state.phase === 'downloading' ? `正在下载${version}`
+  const title = state.justUpdated ? `已更新至 v${state.currentVersion}`
+    : state.phase === 'downloading' ? `正在下载${version}`
     : state.phase === 'ready' ? '更新已准备好'
       : state.phase === 'available' ? `发现新版本${version}`
         : state.phase === 'error' ? '更新失败'
@@ -24,7 +26,7 @@ export function UpdateDialog({ state, onCheck, onDownload, onRestart }: Props) {
       <footer>
         {state.phase === 'available' ? <button className="primaryButton" onClick={onDownload} type="button">立即更新</button> : null}
         {state.phase === 'ready' ? <button className="primaryButton" onClick={onRestart} type="button">重启更新</button> : null}
-        {state.phase === 'error' ? <button className="primaryButton" onClick={onCheck} type="button">重试</button> : null}
+        {state.phase === 'error' ? <><button onClick={onOpenRelease} type="button">打开下载页</button><button className="primaryButton" onClick={onCheck} type="button">重试</button></> : null}
       </footer>
     </section>
   );

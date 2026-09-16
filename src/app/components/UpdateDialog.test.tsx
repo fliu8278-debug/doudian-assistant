@@ -7,6 +7,7 @@ describe('UpdateDialog', () => {
     const markup = renderToStaticMarkup(<UpdateDialog
       onCheck={vi.fn()}
       onDownload={vi.fn()}
+      onOpenRelease={vi.fn()}
       onRestart={vi.fn()}
       state={{ phase: 'downloading', currentVersion: '0.1.1', percent: 42, version: '0.1.2' }}
     />);
@@ -20,6 +21,7 @@ describe('UpdateDialog', () => {
     const markup = renderToStaticMarkup(<UpdateDialog
       onCheck={vi.fn()}
       onDownload={vi.fn()}
+      onOpenRelease={vi.fn()}
       onRestart={vi.fn()}
       state={{ phase: 'ready', currentVersion: '0.1.1', version: '0.1.2', releaseNotes: '修复视频预览' }}
     />);
@@ -27,5 +29,17 @@ describe('UpdateDialog', () => {
     expect(markup).toContain('更新已准备好');
     expect(markup).toContain('重启更新');
     expect(markup).toContain('修复视频预览');
+  });
+
+  it('offers the release page when updating fails', () => {
+    const markup = renderToStaticMarkup(<UpdateDialog
+      onCheck={vi.fn()}
+      onDownload={vi.fn()}
+      onOpenRelease={vi.fn()}
+      onRestart={vi.fn()}
+      state={{ phase: 'error', currentVersion: '0.1.1', error: '下载更新失败，请稍后重试。' }}
+    />);
+
+    expect(markup).toContain('打开下载页');
   });
 });

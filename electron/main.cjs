@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const net = require('node:net');
 const path = require('node:path');
@@ -52,7 +52,9 @@ async function startApp() {
   updater = startAutoUpdater({
     app,
     autoUpdater,
-    broadcast: (state) => mainWindow?.webContents.send('updater:state', state)
+    broadcast: (state) => mainWindow?.webContents.send('updater:state', state),
+    openExternal: (url) => shell.openExternal(url),
+    settingsPath: path.join(app.getPath('userData'), 'updater.json')
   });
   registerAutoUpdaterIpc({ ipcMain, coordinator: updater });
 }

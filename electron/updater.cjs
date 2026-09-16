@@ -1,8 +1,17 @@
-function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = console }) {
+const { existsSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
+const { dirname } = require('node:path');
+
+const DEFAULT_RELEASE_URL = 'https://github.com/fliu8278-debug/doudian-assistant-releases/releases/latest';
+
+function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = console, openExternal, releaseUrl = DEFAULT_RELEASE_URL, settingsPath }) {
+  const settings = readSettings(settingsPath);
+  const currentVersion = typeof app.getVersion === 'function' ? app.getVersion() : undefined;
+  const justUpdated = app.isPackaged && settings.pendingVersion === currentVersion;
   let state = {
     phase: 'idle',
-    currentVersion: typeof app.getVersion === 'function' ? app.getVersion() : undefined,
-    backgroundEnabled: false
+    currentVersion,
+    backgroundEnabled: settings.backgroundEnabled,
+    ...(justUpdated ? { justUpdated: true, releaseNotes: settings.pendingReleaseNotes, version: currentVersion } : {})
   };
   const publish = (next) => {
     state = { ...state, ...next };
@@ -34,18 +43,34 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
   const restart = () => {
     if (state.phase === 'ready') autoUpdater.quitAndInstall();
   };
-  const setBackground = (enabled) => publish({ backgroundEnabled: Boolean(enabled) });
+  const setBackground = (enabled) => {
+    const next = publish({ backgroundEnabled: Boolean(enabled) });
+    saveSettings(settingsPath, { ...settings, backgroundEnabled: next.backgroundEnabled });
+    return next;
+  };
+  const openRelease = async () => {
+    if (openExternal) await openExternal(state.releaseUrl ?? releaseUrl);
+  };
 
-  if (!app.isPackaged) return { check, download, getState: () => state, restart, setBackground };
+  if (!app.isPackaged) return { check, download, getState: () => state, openRelease, restart, setBackground };
 
+  saveSettings(settingsPath, {
+    ...settings,
+    lastRunVersion: currentVersion,
+    pendingReleaseNotes: justUpdated ? undefined : settings.pendingReleaseNotes,
+    pendingVersion: justUpdated ? undefined : settings.pendingVersion
+  });
   autoUpdater.autoDownload = false;
   autoUpdater.on('checking-for-update', () => publish({ phase: 'checking', error: undefined }));
-  autoUpdater.on('update-available', (info) => publish({
-    phase: 'available',
-    version: info.version,
-    releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : undefined,
-    releaseUrl: info.releaseName
-  }));
+  autoUpdater.on('update-available', (info) => {
+    publish({
+      phase: 'available',
+      version: info.version,
+      releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : undefined,
+      releaseUrl
+    });
+    if (state.backgroundEnabled) void download();
+  });
   autoUpdater.on('update-not-available', () => publish({ phase: 'not-available' }));
   autoUpdater.on('download-progress', (progress) => publish({
     phase: 'downloading',
@@ -58,13 +83,20 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
     version: info.version ?? state.version,
     releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : state.releaseNotes
   }));
+  autoUpdater.on('update-downloaded', (info) => saveSettings(settingsPath, {
+    ...settings,
+    backgroundEnabled: state.backgroundEnabled,
+    lastRunVersion: currentVersion,
+    pendingReleaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : state.releaseNotes,
+    pendingVersion: info.version ?? state.version
+  }));
   autoUpdater.on('error', (error) => {
     log.error('更新失败', error);
     publish({ phase: 'error', error: '更新失败，请稍后重试。' });
   });
   void check();
 
-  return { check, download, getState: () => state, restart, setBackground };
+  return { check, download, getState: () => state, openRelease, restart, setBackground };
 }
 
 function registerAutoUpdaterIpc({ ipcMain, coordinator }) {
@@ -76,6 +108,28 @@ function registerAutoUpdaterIpc({ ipcMain, coordinator }) {
     return coordinator.getState();
   });
   ipcMain.handle('updater:set-background', (_event, enabled) => coordinator.setBackground(enabled));
+  ipcMain.handle('updater:open-release', () => coordinator.openRelease());
 }
 
 module.exports = { registerAutoUpdaterIpc, startAutoUpdater };
+
+function readSettings(settingsPath) {
+  if (!settingsPath || !existsSync(settingsPath)) return { backgroundEnabled: false };
+  try {
+    const stored = JSON.parse(readFileSync(settingsPath, 'utf8'));
+    return {
+      backgroundEnabled: Boolean(stored.backgroundEnabled),
+      lastRunVersion: stored.lastRunVersion,
+      pendingReleaseNotes: stored.pendingReleaseNotes,
+      pendingVersion: stored.pendingVersion
+    };
+  } catch {
+    return { backgroundEnabled: false };
+  }
+}
+
+function saveSettings(settingsPath, settings) {
+  if (!settingsPath) return;
+  mkdirSync(dirname(settingsPath), { recursive: true });
+  writeFileSync(settingsPath, JSON.stringify(settings), 'utf8');
+}

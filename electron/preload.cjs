@@ -5,6 +5,7 @@ function createUpdaterBridge(ipcRenderer) {
     download: () => ipcRenderer.invoke('updater:download'),
     restart: () => ipcRenderer.invoke('updater:restart'),
     setBackground: (enabled) => ipcRenderer.invoke('updater:set-background', Boolean(enabled)),
+    openRelease: () => ipcRenderer.invoke('updater:open-release'),
     onState: (listener) => {
       const receive = (_event, state) => listener(state);
       ipcRenderer.on('updater:state', receive);

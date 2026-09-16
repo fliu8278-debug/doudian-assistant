@@ -1,5 +1,8 @@
 import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { registerAutoUpdaterIpc, startAutoUpdater } from './updater.cjs';
 
@@ -77,5 +80,50 @@ describe('startAutoUpdater', () => {
     const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 
     expect(packageJson.build.publish[0]).toMatchObject({ provider: 'github', repo: 'doudian-assistant-releases' });
+  });
+
+  it('persists background downloads and opens the release page on demand', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'doudian-updater-test-'));
+    const settingsPath = join(directory, 'settings.json');
+    const openExternal = vi.fn().mockResolvedValue(undefined);
+    try {
+      const first = startAutoUpdater({
+        app: { isPackaged: true, getVersion: () => '0.1.1' }, autoUpdater: createUpdater(), settingsPath, log: { error: vi.fn() }
+      });
+      first.setBackground(true);
+      const autoUpdater = createUpdater();
+      const restored = startAutoUpdater({
+        app: { isPackaged: true, getVersion: () => '0.1.1' }, autoUpdater, openExternal, settingsPath, log: { error: vi.fn() }
+      });
+
+      autoUpdater.emit('update-available', { version: '0.1.2' });
+      await new Promise(setImmediate);
+      await restored.openRelease();
+
+      expect(restored.getState()).toMatchObject({ backgroundEnabled: true });
+      expect(autoUpdater.downloadUpdate).toHaveBeenCalledOnce();
+      expect(openExternal).toHaveBeenCalledWith('https://github.com/fliu8278-debug/doudian-assistant-releases/releases/latest');
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('shows downloaded release notes once after the app upgrades', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'doudian-updater-test-'));
+    const settingsPath = join(directory, 'settings.json');
+    writeFileSync(settingsPath, JSON.stringify({ pendingReleaseNotes: '修复视频预览', pendingVersion: '0.1.2' }));
+    try {
+      const firstRun = startAutoUpdater({
+        app: { isPackaged: true, getVersion: () => '0.1.2' }, autoUpdater: createUpdater(), settingsPath, log: { error: vi.fn() }
+      });
+      const secondRun = startAutoUpdater({
+        app: { isPackaged: true, getVersion: () => '0.1.2' }, autoUpdater: createUpdater(), settingsPath, log: { error: vi.fn() }
+      });
+
+      expect(firstRun.getState()).toMatchObject({ justUpdated: true, releaseNotes: '修复视频预览' });
+      expect(secondRun.getState()).not.toHaveProperty('justUpdated', true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

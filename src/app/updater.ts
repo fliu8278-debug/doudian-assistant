@@ -12,6 +12,7 @@ export type UpdateState = {
   percent?: number;
   transferred?: number;
   total?: number;
+  justUpdated?: boolean;
 };
 
 type UpdaterBridge = {
@@ -20,6 +21,7 @@ type UpdaterBridge = {
   download(): Promise<UpdateState>;
   restart(): Promise<UpdateState>;
   setBackground(enabled: boolean): Promise<UpdateState>;
+  openRelease(): Promise<void>;
   onState(listener: (state: UpdateState) => void): () => void;
 };
 
@@ -58,6 +60,7 @@ export function useUpdater() {
     check: () => bridge?.check(),
     download: () => bridge?.download(),
     restart: () => bridge?.restart(),
-    setBackground: (enabled: boolean) => bridge?.setBackground(enabled)
+    setBackground: (enabled: boolean) => bridge?.setBackground(enabled),
+    openRelease: () => bridge?.openRelease()
   };
 }
