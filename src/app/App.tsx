@@ -250,11 +250,6 @@ export function WorkspacePlaceholder(props: {
 }
 
 type VideoProcessingState = 'idle' | 'processing' | 'complete' | 'failed';
-type VideoMetadata = {
-  duration: number;
-  height: number;
-  width: number;
-};
 
 export function VideoFrameRateWorkbench() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -262,7 +257,6 @@ export function VideoFrameRateWorkbench() {
   const requestVersionRef = useRef(0);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [sourceUrl, setSourceUrl] = useState('');
-  const [metadata, setMetadata] = useState<VideoMetadata | null>(null);
   const [frameDropMode, setFrameDropMode] = useState<'random' | 'interval'>('random');
   const [frameDropValue, setFrameDropValue] = useState(1);
   const [processingState, setProcessingState] = useState<VideoProcessingState>('idle');
@@ -280,7 +274,6 @@ export function VideoFrameRateWorkbench() {
     if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
     setSourceFile(file);
     setSourceUrl(URL.createObjectURL(file));
-    setMetadata(null);
     setProcessingState('idle');
     setJob(null);
     setProcessingError('');
@@ -350,43 +343,36 @@ export function VideoFrameRateWorkbench() {
 
       <section className="videoFrameGrid" aria-label="视频抽帧工作区">
         <section className="workspaceCard videoFramePanel videoFrameSourcePanel videoFrameSourceCard" aria-labelledby="video-source-title">
-          <h2 id="video-source-title">源视频与参数</h2>
-          <div className="videoFrameUpload">
-            <strong>导入本地视频</strong>
-            <span>支持 MP4</span>
-            <button onClick={() => fileInputRef.current?.click()} type="button">选择视频</button>
-            <input
-              ref={fileInputRef}
-              accept="video/mp4"
-              className="hiddenInput"
-              onChange={(event) => chooseVideo(event.target.files?.[0])}
-              type="file"
-            />
-          </div>
-
-          <div className="videoFrameFileRow">
-            <span>源文件</span>
-            <strong>{sourceFile?.name ?? '未选择视频'}</strong>
-          </div>
-          <div className="videoFramePreview">
-            <video
-              className="videoFramePlayer"
-              controls
-              onLoadedMetadata={(event) => setMetadata({
-                duration: event.currentTarget.duration,
-                height: event.currentTarget.videoHeight,
-                width: event.currentTarget.videoWidth
-              })}
-              src={sourceUrl || undefined}
-            />
-          </div>
-
-          <dl className="videoFrameMetadata">
-            <div><dt>视频时长</dt><dd>{metadata ? formatVideoDuration(metadata.duration) : '—'}</dd></div>
-            <div><dt>文件大小</dt><dd>{sourceFile ? formatFileSize(sourceFile.size) : '—'}</dd></div>
-            <div><dt>视频分辨率</dt><dd>{metadata ? `${metadata.width} × ${metadata.height}` : '—'}</dd></div>
-            <div><dt>原始帧率</dt><dd>加载后识别</dd></div>
-          </dl>
+          <h2 id="video-source-title">上传与处理</h2>
+          {sourceUrl ? (
+            <div className="videoFramePreview videoFrameSourcePreview">
+              <video
+                className="videoFramePlayer"
+                controls
+                src={sourceUrl}
+              />
+              <button className="videoFrameReplaceButton" onClick={() => fileInputRef.current?.click()} type="button">更换视频</button>
+              <input
+                ref={fileInputRef}
+                accept="video/mp4"
+                className="hiddenInput"
+                onChange={(event) => chooseVideo(event.target.files?.[0])}
+                type="file"
+              />
+            </div>
+          ) : (
+            <label className="videoFrameUpload">
+              <strong>上传 MP4 视频</strong>
+              <span>点击选择文件</span>
+              <input
+                ref={fileInputRef}
+                accept="video/mp4"
+                className="hiddenInput"
+                onChange={(event) => chooseVideo(event.target.files?.[0])}
+                type="file"
+              />
+            </label>
+          )}
 
           <div className="videoFrameSettings">
             <h3>抽帧设置</h3>

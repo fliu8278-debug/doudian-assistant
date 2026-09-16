@@ -12,11 +12,11 @@ describe('应用侧边栏', () => {
     expect(markup).toContain('视频抽帧');
   });
 
-  it('提供左侧处理与右侧输出视频工作区', () => {
+  it('提供紧凑的上传处理与输出视频工作区', () => {
     const markup = renderToStaticMarkup(<VideoFrameRateWorkbench />);
 
-    expect(markup).toContain('源视频与参数');
-    expect(markup).toContain('导入本地视频');
+    expect(markup).toContain('上传 MP4 视频');
+    expect(markup).toContain('videoFrameUpload');
     expect(markup).toContain('随机抽帧');
     expect(markup).toContain('间隔抽帧');
     expect(markup).not.toContain('目标帧率');
@@ -25,6 +25,8 @@ describe('应用侧边栏', () => {
     expect(markup).toContain('处理进度');
     expect(markup).toContain('下载视频');
     expect(markup).toContain('videoFramePage');
+    expect(markup).not.toContain('videoFrameFileRow');
+    expect(markup).not.toContain('videoFrameMetadata');
   });
 
   it('renders an independent workspace page for a sidebar entry', () => {

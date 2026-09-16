@@ -500,7 +500,9 @@ button:disabled {
 }
 
 .videoFrameUpload {
-  min-height: clamp(78px, 12vh, 106px);
+  position: relative;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
   display: grid;
   place-items: center;
   align-content: center;
@@ -509,7 +511,24 @@ button:disabled {
   border: 1px dashed #9dc3f8;
   border-radius: 10px;
   background: #f8fbff;
+  cursor: pointer;
   text-align: center;
+}
+
+.videoFrameUpload .hiddenInput {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.videoFrameUpload:focus-within {
+  outline: 2px solid #1769e0;
+  outline-offset: 2px;
 }
 
 .videoFrameUpload strong {
@@ -523,34 +542,6 @@ button:disabled {
 .videoFrameStatus {
   color: #6b7a90;
   font-size: 13px;
-}
-
-.videoFrameUpload button {
-  min-width: 112px;
-  margin-top: 3px;
-  border-color: #b9d2f1;
-  color: #1769e0;
-}
-
-.videoFrameFileRow {
-  display: grid;
-  grid-template-columns: 82px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  min-height: 36px;
-  padding: 0 10px;
-  border: 1px solid #dce7f2;
-  border-radius: 8px;
-  background: #f7fbff;
-  color: #6b7a90;
-  font-size: 13px;
-}
-
-.videoFrameFileRow strong {
-  overflow: hidden;
-  color: #44546a;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .videoFramePlayer {
@@ -570,7 +561,6 @@ button:disabled {
   background: #161d27;
 }
 
-.videoFrameMetadata,
 .videoFrameOutputInfo dl {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -580,7 +570,6 @@ button:disabled {
   border-left: 1px solid #e4edf6;
 }
 
-.videoFrameMetadata div,
 .videoFrameOutputInfo dl div {
   display: flex;
   justify-content: space-between;
@@ -593,18 +582,31 @@ button:disabled {
   font-size: 13px;
 }
 
-.videoFrameMetadata dt,
-.videoFrameMetadata dd,
 .videoFrameOutputInfo dt,
 .videoFrameOutputInfo dd {
   margin: 0;
 }
 
-.videoFrameMetadata dd,
 .videoFrameOutputInfo dd {
   color: #35465a;
   font-weight: 600;
   text-align: right;
+}
+
+.videoFrameSourcePreview { min-height: 0; }
+
+.videoFrameReplaceButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 82px;
+  height: 30px;
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: 6px;
+  background: rgb(17 31 49 / 72%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .videoFrameSettings {
