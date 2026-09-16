@@ -68,6 +68,10 @@ env:
 
 State that `GH_RELEASE_TOKEN` is required and Windows may show an unknown-publisher prompt because the package is deliberately unsigned.
 
+- [ ] **Step 4: Initialize the public release repository before its first release**
+
+Create and push only a `README.md` to the release repository's `main` branch. GitHub cannot create a release tag in a repository with no initial commit.
+
 ### Task 3: Verify and publish the release configuration
 
 **Files:**

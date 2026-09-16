@@ -2,7 +2,7 @@
 
 ## 一次性配置
 
-1. 在 GitHub 创建公开空仓库 `fliu8278-debug/doudian-assistant-releases`。它只用于 GitHub Releases，不能上传源码或本地数据。
+1. 在 GitHub 创建公开仓库 `fliu8278-debug/doudian-assistant-releases`，并保留一个 README 作为初始提交。它只用于 GitHub Releases，不能上传源码或本地数据。
 2. 创建可写入该公开发布仓库的 GitHub personal access token，并把它保存为私有源码仓库 `doudian-assistant` 的 Actions Secret `GH_RELEASE_TOKEN`。
 
 没有 `GH_RELEASE_TOKEN`，发布工作流会失败。
