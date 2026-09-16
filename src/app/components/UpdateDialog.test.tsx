@@ -15,7 +15,7 @@ describe('UpdateDialog', () => {
       }}
     />);
 
-    expect(markup).toContain('正在下载 v0.1.2');
+    expect(markup).toContain('发现新版本');
     expect(markup).toContain('下载更新包');
     expect(markup).toContain('42%');
     expect(markup).toContain('已下载 42 MB');
@@ -44,9 +44,37 @@ describe('UpdateDialog', () => {
       state={{ phase: 'ready', currentVersion: '0.1.1', version: '0.1.2', releaseNotes: '修复视频预览' }}
     />);
 
-    expect(markup).toContain('更新已准备好');
-    expect(markup).toContain('重启更新');
+    expect(markup).toContain('v0.1.2 已就绪，重启后生效。');
+    expect(markup).toContain('立即重启');
     expect(markup).toContain('修复视频预览');
+  });
+
+  it('shows the restart-ready notice in the approved update view', () => {
+    const markup = renderToStaticMarkup(<UpdateDialog
+      onCheck={vi.fn()}
+      onDownload={vi.fn()}
+      onOpenRelease={vi.fn()}
+      onRestart={vi.fn()}
+      state={{ phase: 'ready', currentVersion: '0.1.1', version: '0.1.2' }}
+    />);
+
+    expect(markup).toContain('v0.1.2 已就绪，重启后生效。');
+    expect(markup).toContain('立即重启');
+    expect(markup).toContain('稍后');
+  });
+
+  it('shows the update-success view after the app restarts on the new version', () => {
+    const markup = renderToStaticMarkup(<UpdateDialog
+      onCheck={vi.fn()}
+      onDownload={vi.fn()}
+      onOpenRelease={vi.fn()}
+      onRestart={vi.fn()}
+      state={{ phase: 'idle', currentVersion: '0.1.2', justUpdated: true, releaseNotes: '修复视频预览' }}
+    />);
+
+    expect(markup).toContain('🎉 更新成功！');
+    expect(markup).toContain('更新已完成，当前版本 v0.1.2');
+    expect(markup).toContain('我知道了');
   });
 
   it('offers the release page when updating fails', () => {

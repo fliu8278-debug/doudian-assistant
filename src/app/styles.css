@@ -231,36 +231,48 @@ button:disabled {
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(31, 45, 61, 0.32);
+  background: rgba(26, 41, 59, 0.42);
 }
 
 .updateDialog {
-  width: min(480px, 100%);
-  border: 1px solid #d9e2ec;
-  border-radius: 16px;
+  display: flex;
+  width: min(660px, 100%);
+  max-height: calc(100dvh - 40px);
+  flex-direction: column;
+  border: 1px solid #dce5ef;
+  border-radius: 20px;
   background: #fff;
-  box-shadow: 0 28px 80px rgba(28, 45, 66, 0.24);
+  box-shadow: 0 28px 80px rgba(18, 35, 55, 0.32);
   overflow: hidden;
 }
 
-.updateDialog header {
+.updateDialogHeader {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 20px 20px 14px;
-  border-bottom: 1px solid #e5ebf2;
+  min-height: 82px;
+  padding: 21px 28px;
+  border-bottom: 1px solid #e8edf3;
 }
 
-.updateDialog h2 { margin: 5px 0 0; font-size: 20px; }
-.updateDialog header b { color: #718197; font-size: 12px; font-weight: 500; }
-.updateNotes, .updateError { margin: 16px 20px; color: #52657d; font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
-.updateError { color: #b54747; }
-.updateProgress { margin: 16px 20px; }
+.updateDialogTitle { display: flex; align-items: center; gap: 12px; }
+.updateDialogIcon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: #1769e0; color: #fff; font-size: 20px; font-weight: 700; }
+.updateDialog h2 { margin: 0; font-size: 21px; line-height: 1.2; }
+.updateDialogClose { width: 32px; height: 32px; border: 0; border-radius: 7px; background: transparent; color: #60738b; font-size: 25px; line-height: 1; }
+.updateDialogClose:hover { background: #f1f5fa; color: #20364f; }
+.updateDialogBody { min-height: 0; padding: 25px 28px 20px; overflow: auto; }
+.updateDialogVersion { color: #1769e0; font-size: 14px; font-weight: 800; }
+.updateDialogSummary { margin: 11px 0 0; color: #5e7088; font-size: 14px; line-height: 1.6; }
+.updateReadyNotice { margin: 16px 0 0; border-radius: 9px; background: #e9f8ef; padding: 12px 14px; color: #16824c; font-size: 14px; }
+.updateDialogRule { height: 1px; margin: 23px 0 15px; background: #e6ecf3; }
+.updateDialog h3 { margin: 0 0 10px; color: #2d3e53; font-size: 14px; }
+.updateDialogNotes { max-height: 190px; overflow: auto; padding-right: 12px; color: #5d6e84; font-size: 13px; line-height: 1.75; white-space: pre-wrap; }
+.updateError { margin: 16px 0 0; color: #b54747; font-size: 13px; line-height: 1.6; }
+.updateProgress { margin: 20px 0 0; }
 .updateProgressHead, .updateProgressMeta, .updateProgressStages { display: flex; align-items: center; justify-content: space-between; }
 .updateProgressHead { color: #52657d; font-size: 13px; }
 .updateProgressHead strong { color: #1769e0; font-size: 20px; font-variant-numeric: tabular-nums; }
-.updateProgressTrack { height: 10px; margin-top: 9px; overflow: hidden; border-radius: 999px; background: #eaf0f7; box-shadow: inset 0 1px 2px rgba(28, 45, 66, 0.08); }
+.updateProgressTrack { height: 8px; margin-top: 9px; overflow: hidden; border-radius: 999px; background: #eaf0f7; box-shadow: inset 0 1px 2px rgba(28, 45, 66, 0.08); }
 .updateProgressTrack i { display: block; height: 100%; border-radius: inherit; background: #1769e0; }
 .updateProgressMeta { margin-top: 8px; color: #718197; font-size: 12px; font-variant-numeric: tabular-nums; }
 .updateProgressStages { justify-content: flex-start; gap: 12px; margin-top: 14px; color: #8a98aa; font-size: 12px; }
@@ -269,11 +281,21 @@ button:disabled {
 .updateProgressStages .done::before { background: #34a469; }
 .updateProgressStages .active { color: #1769e0; font-weight: 700; }
 .updateProgressStages .active::before { background: #1769e0; }
+.updateDialogFooter { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 19px 28px; border-top: 1px solid #dae4ef; background: #f3f7fc; }
+.updateDialogSecondary, .updateDialogPrimary { height: 40px; border-radius: 10px; padding: 0 17px; font-weight: 700; }
+.updateDialogSecondary { border: 1px solid #d6e0ec; background: #fff; color: #3b5674; }
+.updateDialogPrimary { border: 1px solid #1769e0; background: #1769e0; color: #fff; box-shadow: 0 8px 16px rgba(23, 105, 224, 0.22); }
+.updateDialogPrimary:disabled { border-color: #83b0e8; background: #83b0e8; box-shadow: none; }
 
 .videoFrameModePicker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
 .videoFrameModePicker button { min-height: 42px; border: 1px solid #d4e0ee; border-radius: 8px; background: #fff; color: #617890; font-weight: 700; }
 .videoFrameModePicker button.active { border-color: #1769e0; background: #f1f7ff; color: #1769e0; }
-.updateDialog footer { display: flex; justify-content: flex-end; padding: 0 20px 20px; }
+@media (max-width: 560px) {
+  .updateDialogBackdrop { padding: 12px; }
+  .updateDialogHeader, .updateDialogBody, .updateDialogFooter { padding-right: 20px; padding-left: 20px; }
+  .updateDialogFooter { gap: 8px; }
+  .updateDialogSecondary, .updateDialogPrimary { padding: 0 12px; }
+}
 
 .updateReadyToast {
   position: fixed;
