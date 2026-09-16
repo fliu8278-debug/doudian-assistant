@@ -15,7 +15,7 @@ FFmpeg 可执行文件由安装前准备脚本下载到本地 `vendor` 目录，
 1. 前端仅接受 MP4，目标 FPS 限制为 1–60，默认 15。
 2. 点击“开始处理”后，前端将视频和 FPS 上传至 `POST /api/video-frame-extraction`。
 3. 服务端在系统临时目录建立一个随机任务目录，保存上传文件，并以无 shell 的 `spawn` 调用内置 FFmpeg。
-4. FFmpeg 使用视频滤镜降低帧率，映射第一个视频流和可选音频流；视频编码为 H.264，音频优先直接复制，输出为 MP4。
+4. FFmpeg 使用视频滤镜降低帧率，映射第一个视频流和可选音频流；使用 LGPL 构建自带的 MPEG-4 编码器，音频优先直接复制，输出为 MP4。
 5. 服务端解析 FFmpeg 的 `-progress pipe:1` 输出，保存 `queued`、`processing`、`complete`、`failed` 四种任务状态及百分比。
 6. 前端轮询 `GET /api/video-frame-extraction/:id`。完成后，右侧的视频预览和下载按钮均指向 `GET /api/video-frame-extraction/:id/download`，不再使用原始上传文件。
 
@@ -43,7 +43,7 @@ FFmpeg 可执行文件由安装前准备脚本下载到本地 `vendor` 目录，
 
 ## 输出约束
 
-输出始终为 MP4、H.264 视频、原时长和目标 FPS。音频流存在时保留；若源音频不能直接封装进 MP4，服务端重试为 AAC，仍无法生成时返回失败。页面继续显示实际产物的文件大小、时长和目标 FPS。
+输出始终为 MP4、MPEG-4 视频、原时长和目标 FPS。音频流存在时保留；若源音频不能直接封装进 MP4，服务端重试为 AAC，仍无法生成时返回失败。页面继续显示实际产物的文件大小、时长和目标 FPS。
 
 ## 测试与验收
 

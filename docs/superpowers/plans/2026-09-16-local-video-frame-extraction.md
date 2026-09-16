@@ -40,7 +40,7 @@ describe('video frame extraction', () => {
   });
   it('creates an H.264 MP4 command that keeps an optional audio stream', () => {
     const manager = new VideoFrameExtractionManager({ ffmpegPath: 'ffmpeg.exe' });
-    expect(manager.commandFor('input.mp4', 'output.mp4', 15)).toEqual(expect.arrayContaining(['-vf', 'fps=15', '-map', '0:v:0', '-map', '0:a?', '-c:v', 'libx264', '-c:a', 'copy']));
+    expect(manager.commandFor('input.mp4', 'output.mp4', 15)).toEqual(expect.arrayContaining(['-vf', 'fps=15', '-map', '0:v:0', '-map', '0:a?', '-c:v', 'mpeg4', '-q:v', '3', '-c:a', 'copy']));
   });
 });
 ```
@@ -56,7 +56,7 @@ Expected: FAIL，提示无法解析 `./videoFrameExtraction`。
 实现 `VideoFrameExtractionManager`，只暴露 `start`、`get`、`commandFor`、`downloadPath`、`cleanupExpired`。`start` 验证 1–60 FPS、生成 `randomUUID()` 任务目录、以参数数组执行：
 
 ```ts
-['-y', '-i', inputPath, '-vf', `fps=${targetFps}`, '-map', '0:v:0', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'medium', '-crf', '23', '-c:a', 'copy', '-movflags', '+faststart', '-progress', 'pipe:1', outputPath]
+['-y', '-i', inputPath, '-vf', `fps=${targetFps}`, '-map', '0:v:0', '-map', '0:a?', '-c:v', 'mpeg4', '-q:v', '3', '-c:a', 'copy', '-movflags', '+faststart', '-progress', 'pipe:1', outputPath]
 ```
 
 解析 `out_time_ms` 和 `progress=end` 为 0–100；若音频直拷贝导致 FFmpeg 失败，则只重试一次并将 `-c:a copy` 改为 `-c:a aac`。仍失败时把任务变为 `failed` 并保存非敏感中文错误。任务目录在进程启动时删除 24 小时以前的目录。

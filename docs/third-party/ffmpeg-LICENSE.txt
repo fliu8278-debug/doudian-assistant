@@ -1,0 +1,9 @@
+FFmpeg for Windows is downloaded by scripts/download-ffmpeg.mjs from the
+BtbN/FFmpeg-Builds GitHub release named "ffmpeg-master-latest-win64-lgpl-shared.zip".
+
+The selected build is LGPL. Its distributed archive includes its license and
+notices alongside the executables. The unmodified archive is the source of the
+FFmpeg binaries bundled in the Windows application.
+
+Source: https://github.com/BtbN/FFmpeg-Builds
+FFmpeg project and license text: https://ffmpeg.org/legal.html

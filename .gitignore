@@ -4,5 +4,6 @@ build/
 release/
 data/
 outputs/
+vendor/
 tmp-*.ts
 .superpowers/

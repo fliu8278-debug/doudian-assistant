@@ -87,7 +87,7 @@ export class VideoFrameExtractionManager {
       '-y', '-i', inputPath,
       '-vf', `fps=${targetFps}`,
       '-map', '0:v:0', '-map', '0:a?',
-      '-c:v', 'libx264', '-preset', 'medium', '-crf', '23',
+      '-c:v', 'mpeg4', '-q:v', '3',
       '-c:a', audioCodec,
       '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', outputPath
     ];
