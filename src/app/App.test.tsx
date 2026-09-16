@@ -17,7 +17,9 @@ describe('应用侧边栏', () => {
 
     expect(markup).toContain('源视频与参数');
     expect(markup).toContain('导入本地视频');
-    expect(markup).toContain('目标帧率');
+    expect(markup).toContain('随机抽帧');
+    expect(markup).toContain('间隔抽帧');
+    expect(markup).not.toContain('目标帧率');
     expect(markup).toContain('开始处理');
     expect(markup).toContain('输出视频');
     expect(markup).toContain('处理进度');

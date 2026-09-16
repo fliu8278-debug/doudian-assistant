@@ -5,12 +5,14 @@ import { tmpdir } from 'node:os';
 import { basename, join, parse } from 'node:path';
 
 export type VideoFrameExtractionStatus = 'processing' | 'complete' | 'failed';
+export type FrameDropMode = 'random' | 'interval';
+export type FrameDropSettings = { mode: FrameDropMode; value: number };
 
 export type VideoFrameExtractionJob = {
   id: string;
   status: VideoFrameExtractionStatus;
   progress: number;
-  targetFps: number;
+  settings: FrameDropSettings;
   outputName: string;
   outputSize?: number;
   duration?: number;
@@ -24,36 +26,38 @@ type StoredJob = VideoFrameExtractionJob & {
 
 type ManagerOptions = {
   ffmpegPath: string;
+  ffprobePath?: string;
   tempRoot?: string;
 };
 
 type StartInput = {
   inputPath: string;
   originalName: string;
-  targetFps: number;
+  settings: FrameDropSettings;
 };
 
 export class VideoFrameExtractionManager {
   private readonly ffmpegPath: string;
+  private readonly ffprobePath: string;
   private readonly jobs = new Map<string, StoredJob>();
   private readonly tempRoot: string;
 
   constructor(options: ManagerOptions) {
     this.ffmpegPath = options.ffmpegPath;
+    this.ffprobePath = options.ffprobePath ?? options.ffmpegPath.replace(/ffmpeg\.exe$/i, 'ffprobe.exe');
     this.tempRoot = options.tempRoot ?? join(tmpdir(), 'doudian-video-frame-extraction');
     mkdirSync(this.tempRoot, { recursive: true });
     this.cleanupExpired();
   }
 
   start(input: StartInput) {
-    if (!Number.isInteger(input.targetFps) || input.targetFps < 1 || input.targetFps > 60) {
-      throw new Error('目标帧率必须在 1 到 60 FPS 之间');
-    }
+    this.validateSettings(input.settings);
 
     const id = randomUUID();
     const directory = join(this.tempRoot, id);
     const inputPath = join(directory, 'input.mp4');
-    const outputName = `${safeName(input.originalName)}_${input.targetFps}fps.mp4`;
+    const suffix = input.settings.mode === 'random' ? `random_${input.settings.value}frames` : `every_${input.settings.value}s`;
+    const outputName = `${safeName(input.originalName)}_${suffix}.mp4`;
     const outputPath = join(directory, outputName);
     mkdirSync(directory, { recursive: true });
     renameSync(input.inputPath, inputPath);
@@ -62,7 +66,7 @@ export class VideoFrameExtractionManager {
       id,
       status: 'processing',
       progress: 1,
-      targetFps: input.targetFps,
+      settings: input.settings,
       outputName,
       outputPath,
       directory
@@ -82,15 +86,44 @@ export class VideoFrameExtractionManager {
     return job?.status === 'complete' && existsSync(job.outputPath) ? job.outputPath : undefined;
   }
 
-  commandFor(inputPath: string, outputPath: string, targetFps: number) {
+  validateSettings(settings: FrameDropSettings) {
+    if (!settings || !['random', 'interval'].includes(settings.mode) || !Number.isInteger(settings.value)) {
+      throw new Error('抽帧参数无效');
+    }
+    if (settings.mode === 'random' && (settings.value < 1 || settings.value > 100)) {
+      throw new Error('随机删除帧数必须在 1 到 100 之间');
+    }
+    if (settings.mode === 'interval' && (settings.value < 1 || settings.value > 60)) {
+      throw new Error('间隔秒数必须在 1 到 60 之间');
+    }
+  }
+
+  commandFor(inputPath: string, outputPath: string, settings: FrameDropSettings, source: VideoSource) {
+    const droppedFrames = this.framesToDrop(settings, source);
     return [
       '-y', '-i', inputPath,
-      '-vf', `fps=${targetFps}`,
+      '-vf', `select=not(${droppedFrames.map((frame) => `eq(n\\,${frame})`).join('+')})`, '-fps_mode', 'passthrough',
       '-map', '0:v:0', '-map', '0:a?',
       '-c:v', 'h264_mf', '-b:v', '5M',
       '-c:a', 'aac',
       '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', outputPath
     ];
+  }
+
+  private framesToDrop(settings: FrameDropSettings, source: VideoSource) {
+    const available = Math.max(0, source.frameCount - 2);
+    if (!available) throw new Error('视频帧数不足，无法抽帧');
+    if (settings.mode === 'interval') {
+      const intervalFrames = Math.max(1, Math.round(source.frameRate * settings.value));
+      const frames: number[] = [];
+      for (let frame = intervalFrames; frame < source.frameCount - 1; frame += intervalFrames) frames.push(frame);
+      if (!frames.length) throw new Error('视频时长小于设置的抽帧间隔');
+      return frames;
+    }
+    if (settings.value > available) throw new Error(`随机删除帧数不能超过 ${available} 帧`);
+    const frames = new Set<number>();
+    while (frames.size < settings.value) frames.add(1 + Math.floor(Math.random() * available));
+    return [...frames].sort((first, second) => first - second);
   }
 
   cleanupExpired(maxAgeMs = 24 * 60 * 60 * 1000) {
@@ -106,7 +139,8 @@ export class VideoFrameExtractionManager {
 
   private async process(job: StoredJob, inputPath: string) {
     try {
-      const result = await this.run(job, inputPath);
+      const source = await this.probe(inputPath);
+      const result = await this.run(job, inputPath, source);
       if (!result.ok) throw new Error(result.error);
       const output = statSync(job.outputPath);
       job.status = 'complete';
@@ -118,9 +152,36 @@ export class VideoFrameExtractionManager {
     }
   }
 
-  private run(job: StoredJob, inputPath: string) {
+  private probe(inputPath: string) {
+    return new Promise<VideoSource>((resolve, reject) => {
+      const child = spawn(this.ffprobePath, ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=avg_frame_rate,nb_frames,duration', '-of', 'json', inputPath], { shell: false, windowsHide: true });
+      let stdout = '';
+      let stderr = '';
+      child.stdout.setEncoding('utf8');
+      child.stdout.on('data', (chunk: string) => { stdout += chunk; });
+      child.stderr.setEncoding('utf8');
+      child.stderr.on('data', (chunk: string) => { stderr += chunk; });
+      child.once('error', (error) => reject(new Error((error as NodeJS.ErrnoException).code === 'ENOENT' ? '未找到内置 FFprobe' : error.message)));
+      child.once('close', (code) => {
+        if (code !== 0) return reject(new Error(stderr || '无法读取视频信息'));
+        try {
+          const stream = JSON.parse(stdout).streams?.[0] as { avg_frame_rate?: string; nb_frames?: string; duration?: string } | undefined;
+          const [numerator, denominator] = (stream?.avg_frame_rate ?? '').split('/').map(Number);
+          const frameRate = denominator ? numerator / denominator : numerator;
+          const duration = Number(stream?.duration);
+          const frameCount = Number(stream?.nb_frames) || Math.floor(frameRate * duration);
+          if (!Number.isFinite(frameRate) || frameRate <= 0 || !Number.isFinite(frameCount) || frameCount < 3) throw new Error('视频帧数不足，无法抽帧');
+          resolve({ frameRate, frameCount });
+        } catch (error) {
+          reject(error instanceof Error ? error : new Error('无法读取视频信息'));
+        }
+      });
+    });
+  }
+
+  private run(job: StoredJob, inputPath: string, source: VideoSource) {
     return new Promise<{ ok: boolean; error: string }>((resolve) => {
-      const child = spawn(this.ffmpegPath, this.commandFor(inputPath, job.outputPath, job.targetFps), {
+      const child = spawn(this.ffmpegPath, this.commandFor(inputPath, job.outputPath, job.settings, source), {
         shell: false,
         windowsHide: true
       });
@@ -165,6 +226,8 @@ export class VideoFrameExtractionManager {
     return publicJob;
   }
 }
+
+type VideoSource = { frameRate: number; frameCount: number };
 
 function safeName(fileName: string) {
   const stem = parse(basename(fileName)).name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]+/g, '_').slice(0, 80);

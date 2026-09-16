@@ -4,7 +4,7 @@ export type VideoFrameExtractionJob = {
   id: string;
   status: 'processing' | 'complete' | 'failed';
   progress: number;
-  targetFps: number;
+  settings: { mode: 'random' | 'interval'; value: number };
   outputName: string;
   outputSize?: number;
   duration?: number;
@@ -104,10 +104,11 @@ export async function stopNewcomerGiftBatch(batchId: string) {
   return readJson<NewcomerGiftBatch>(response);
 }
 
-export async function createVideoFrameExtraction(file: File, targetFps: number) {
+export async function createVideoFrameExtraction(file: File, settings: { mode: 'random' | 'interval'; value: number }) {
   const form = new FormData();
   form.append('video', file);
-  form.append('targetFps', String(targetFps));
+  form.append('mode', settings.mode);
+  form.append('value', String(settings.value));
   const response = await fetch('/api/video-frame-extraction', {
     method: 'POST',
     body: form

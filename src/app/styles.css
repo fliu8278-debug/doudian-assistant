@@ -256,8 +256,23 @@ button:disabled {
 .updateDialog header b { color: #718197; font-size: 12px; font-weight: 500; }
 .updateNotes, .updateError { margin: 16px 20px; color: #52657d; font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
 .updateError { color: #b54747; }
-.updateProgress { display: flex; align-items: center; gap: 10px; margin: 16px 20px; }
-.updateProgress progress { width: 100%; height: 8px; accent-color: #1769e0; }
+.updateProgress { margin: 16px 20px; }
+.updateProgressHead, .updateProgressMeta, .updateProgressStages { display: flex; align-items: center; justify-content: space-between; }
+.updateProgressHead { color: #52657d; font-size: 13px; }
+.updateProgressHead strong { color: #1769e0; font-size: 20px; font-variant-numeric: tabular-nums; }
+.updateProgressTrack { height: 10px; margin-top: 9px; overflow: hidden; border-radius: 999px; background: #eaf0f7; box-shadow: inset 0 1px 2px rgba(28, 45, 66, 0.08); }
+.updateProgressTrack i { display: block; height: 100%; border-radius: inherit; background: #1769e0; }
+.updateProgressMeta { margin-top: 8px; color: #718197; font-size: 12px; font-variant-numeric: tabular-nums; }
+.updateProgressStages { justify-content: flex-start; gap: 12px; margin-top: 14px; color: #8a98aa; font-size: 12px; }
+.updateProgressStages span::before { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #cad5e2; content: ''; }
+.updateProgressStages .done { color: #397456; }
+.updateProgressStages .done::before { background: #34a469; }
+.updateProgressStages .active { color: #1769e0; font-weight: 700; }
+.updateProgressStages .active::before { background: #1769e0; }
+
+.videoFrameModePicker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+.videoFrameModePicker button { min-height: 42px; border: 1px solid #d4e0ee; border-radius: 8px; background: #fff; color: #617890; font-weight: 700; }
+.videoFrameModePicker button.active { border-color: #1769e0; background: #f1f7ff; color: #1769e0; }
 .updateDialog footer { display: flex; justify-content: flex-end; padding: 0 20px 20px; }
 
 .updateReadyToast {

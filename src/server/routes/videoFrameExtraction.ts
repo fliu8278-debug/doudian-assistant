@@ -48,7 +48,7 @@ export function createVideoFrameExtractionRouter(manager: VideoFrameExtractionMa
       const job = manager.start({
         inputPath: file.path,
         originalName: file.originalname,
-        targetFps: Number(request.body?.targetFps)
+        settings: { mode: request.body?.mode, value: Number(request.body?.value) }
       });
       response.status(202).json(jobResponse(request, job));
     } catch (error) {

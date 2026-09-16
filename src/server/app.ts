@@ -26,7 +26,8 @@ export function createApp(staticDir = defaultStaticDir()) {
   app.use('/api', couponsRouter);
   app.use('/api', newcomerGiftsRouter);
   app.use('/api', createVideoFrameExtractionRouter(new VideoFrameExtractionManager({
-    ffmpegPath: process.env.DOUDIAN_FFMPEG_PATH || resolve('vendor', 'ffmpeg', 'win32-x64', 'ffmpeg.exe')
+    ffmpegPath: process.env.DOUDIAN_FFMPEG_PATH || resolve('vendor', 'ffmpeg', 'win32-x64', 'ffmpeg.exe'),
+    ffprobePath: process.env.DOUDIAN_FFPROBE_PATH || resolve('vendor', 'ffmpeg', 'win32-x64', 'ffprobe.exe')
   })));
 
   if (existsSync(staticDir)) {

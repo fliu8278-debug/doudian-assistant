@@ -263,7 +263,8 @@ export function VideoFrameRateWorkbench() {
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [sourceUrl, setSourceUrl] = useState('');
   const [metadata, setMetadata] = useState<VideoMetadata | null>(null);
-  const [targetFps, setTargetFps] = useState(15);
+  const [frameDropMode, setFrameDropMode] = useState<'random' | 'interval'>('random');
+  const [frameDropValue, setFrameDropValue] = useState(1);
   const [processingState, setProcessingState] = useState<VideoProcessingState>('idle');
   const [job, setJob] = useState<VideoFrameExtractionJob | null>(null);
   const [processingError, setProcessingError] = useState('');
@@ -296,7 +297,7 @@ export function VideoFrameRateWorkbench() {
     setProcessingError('');
 
     try {
-      const created = await createVideoFrameExtraction(sourceFile, targetFps);
+      const created = await createVideoFrameExtraction(sourceFile, { mode: frameDropMode, value: frameDropValue });
       if (requestVersion !== requestVersionRef.current) return;
       setJob(created);
       void pollJob(created.id, requestVersion);
@@ -336,13 +337,14 @@ export function VideoFrameRateWorkbench() {
       : processingState === 'failed' ? '处理失败'
         : '等待开始处理';
   const outputUrl = processingState === 'complete' ? job?.previewUrl : undefined;
+  const settingLabel = frameDropMode === 'random' ? `随机删除 ${frameDropValue} 帧` : `每隔 ${frameDropValue} 秒删除 1 帧`;
 
   return (
     <div className="videoFramePage">
       <div className="pageHeader">
         <div>
           <h1>视频抽帧</h1>
-          <p>降低视频帧率，保留原时长和原声音。</p>
+          <p>随机或按间隔删除稀疏画面帧，保留原声与原视频时间线。</p>
         </div>
       </div>
 
@@ -388,20 +390,24 @@ export function VideoFrameRateWorkbench() {
 
           <div className="videoFrameSettings">
             <h3>抽帧设置</h3>
+            <div className="videoFrameModePicker" aria-label="抽帧方式">
+              <button className={frameDropMode === 'random' ? 'active' : ''} onClick={() => setFrameDropMode('random')} type="button">随机抽帧</button>
+              <button className={frameDropMode === 'interval' ? 'active' : ''} onClick={() => setFrameDropMode('interval')} type="button">间隔抽帧</button>
+            </div>
             <label className="videoFrameFpsField">
-              <span>目标帧率</span>
+              <span>{frameDropMode === 'random' ? '随机删除帧数' : '间隔秒数'}</span>
               <input
-                aria-label="目标帧率"
-                max={60}
+                aria-label={frameDropMode === 'random' ? '随机删除帧数' : '间隔秒数'}
+                max={frameDropMode === 'random' ? 100 : 60}
                 min={1}
-                onChange={(event) => setTargetFps(Math.max(1, Math.min(60, Number(event.target.value) || 1)))}
+                onChange={(event) => setFrameDropValue(Math.max(1, Math.min(frameDropMode === 'random' ? 100 : 60, Number(event.target.value) || 1)))}
                 type="number"
-                value={targetFps}
+                value={frameDropValue}
               />
-              <b>FPS</b>
+              <b>{frameDropMode === 'random' ? '帧' : '秒'}</b>
             </label>
             <div className="videoFrameOutputSelect">输出：MP4 · 保留原声</div>
-            <p>视频播放速度保持不变</p>
+            <p>仅删除稀疏画面帧，播放速度与时长保持不变</p>
             <button className="primaryButton videoFrameStartButton" disabled={!sourceFile || processingState === 'processing'} onClick={() => void startProcessing()} type="button">
               {processingState === 'processing' ? '处理中…' : '开始处理'}
             </button>
@@ -436,7 +442,7 @@ export function VideoFrameRateWorkbench() {
             <h3>输出信息</h3>
             <dl>
               <div><dt>输出时长</dt><dd>{processingState === 'complete' && job?.duration ? formatVideoDuration(job.duration) : '—'}</dd></div>
-              <div><dt>输出帧率</dt><dd>{processingState === 'complete' ? `${targetFps} FPS` : '—'}</dd></div>
+              <div><dt>处理方式</dt><dd>{processingState === 'complete' ? settingLabel : '—'}</dd></div>
               <div><dt>输出大小</dt><dd>{processingState === 'complete' && job?.outputSize ? formatFileSize(job.outputSize) : '—'}</dd></div>
             </dl>
           </section>

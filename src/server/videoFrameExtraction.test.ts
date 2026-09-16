@@ -9,21 +9,18 @@ import { createVideoFrameExtractionRouter } from './routes/videoFrameExtraction'
 import { VideoFrameExtractionManager } from './videoFrameExtraction';
 
 describe('video frame extraction', () => {
-  it('rejects a target frame rate outside 1 to 60 FPS', () => {
+  it('validates both sparse frame-drop modes', () => {
     const manager = new VideoFrameExtractionManager({ ffmpegPath: 'ffmpeg.exe' });
 
-    expect(() => manager.start({
-      inputPath: 'input.mp4',
-      originalName: 'input.mp4',
-      targetFps: 0
-    })).toThrow('目标帧率必须在 1 到 60 FPS 之间');
+    expect(() => manager.validateSettings({ mode: 'random', value: 0 })).toThrow('随机删除帧数必须在 1 到 100 之间');
+    expect(() => manager.validateSettings({ mode: 'interval', value: 0 })).toThrow('间隔秒数必须在 1 到 60 之间');
   });
 
-  it('creates a Chromium-compatible H.264 MP4 command with AAC audio', () => {
+  it('creates a sparse frame-drop command without lowering the whole video frame rate', () => {
     const manager = new VideoFrameExtractionManager({ ffmpegPath: 'ffmpeg.exe' });
 
-    expect(manager.commandFor('input.mp4', 'output.mp4', 15)).toEqual(expect.arrayContaining([
-      '-vf', 'fps=15', '-map', '0:v:0', '-map', '0:a?', '-c:v', 'h264_mf', '-c:a', 'aac'
+    expect(manager.commandFor('input.mp4', 'output.mp4', { mode: 'random', value: 2 }, { frameRate: 30, frameCount: 300 })).toEqual(expect.arrayContaining([
+      '-vf', expect.stringContaining('select=not('), '-fps_mode', 'passthrough', '-map', '0:v:0', '-map', '0:a?', '-c:v', 'h264_mf', '-c:a', 'aac'
     ]));
   });
 
@@ -38,7 +35,8 @@ describe('video frame extraction', () => {
     try {
       const form = new FormData();
       form.append('video', new Blob(['not a video'], { type: 'text/plain' }), 'note.txt');
-      form.append('targetFps', '15');
+      form.append('mode', 'random');
+      form.append('value', '1');
 
       const response = await fetch(`${started.url}/api/video-frame-extraction`, {
         method: 'POST',
@@ -58,7 +56,7 @@ describe('video frame extraction', () => {
     writeFileSync(outputPath, 'test mp4 content');
     const manager = {
       get: () => ({
-        id: 'job-1', status: 'complete' as const, progress: 100, targetFps: 15, outputName: 'clip_15fps.mp4'
+        id: 'job-1', status: 'complete' as const, progress: 100, settings: { mode: 'random' as const, value: 1 }, outputName: 'clip_random_1frames.mp4'
       }),
       downloadPath: () => outputPath
     } as unknown as VideoFrameExtractionManager;
