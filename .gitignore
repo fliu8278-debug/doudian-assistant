@@ -7,3 +7,4 @@ outputs/
 vendor/
 tmp-*.ts
 .superpowers/
+.worktrees/
