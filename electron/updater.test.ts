@@ -126,7 +126,10 @@ describe('startAutoUpdater', () => {
   it('shows downloaded release notes once after the app upgrades', () => {
     const directory = mkdtempSync(join(tmpdir(), 'doudian-updater-test-'));
     const settingsPath = join(directory, 'settings.json');
-    writeFileSync(settingsPath, JSON.stringify({ pendingReleaseNotes: '修复视频预览', pendingVersion: '0.1.2' }));
+    writeFileSync(settingsPath, JSON.stringify({
+      pendingReleaseNotes: '<ul><li>修复软件更新弹窗将 GitHub HTML 说明显示为乱码的问题。</li><li>发布说明改为清晰的中文更新内容。</li></ul>',
+      pendingVersion: '0.1.2'
+    }));
     try {
       const firstRun = startAutoUpdater({
         app: { isPackaged: true, getVersion: () => '0.1.2' }, autoUpdater: createUpdater(), settingsPath, log: { error: vi.fn() }
@@ -135,7 +138,10 @@ describe('startAutoUpdater', () => {
         app: { isPackaged: true, getVersion: () => '0.1.2' }, autoUpdater: createUpdater(), settingsPath, log: { error: vi.fn() }
       });
 
-      expect(firstRun.getState()).toMatchObject({ justUpdated: true, releaseNotes: '修复视频预览' });
+      expect(firstRun.getState()).toMatchObject({
+        justUpdated: true,
+        releaseNotes: '• 修复软件更新弹窗将 GitHub HTML 说明显示为乱码的问题。\n• 发布说明改为清晰的中文更新内容。'
+      });
       expect(secondRun.getState()).not.toHaveProperty('justUpdated', true);
     } finally {
       rmSync(directory, { recursive: true, force: true });

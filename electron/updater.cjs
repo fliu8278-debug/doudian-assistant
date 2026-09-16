@@ -11,7 +11,7 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
     phase: 'idle',
     currentVersion,
     backgroundEnabled: settings.backgroundEnabled,
-    ...(justUpdated ? { justUpdated: true, releaseNotes: settings.pendingReleaseNotes, version: currentVersion } : {})
+    ...(justUpdated ? { justUpdated: true, releaseNotes: plainReleaseNotes(settings.pendingReleaseNotes), version: currentVersion } : {})
   };
   const publish = (next) => {
     state = { ...state, ...next };
