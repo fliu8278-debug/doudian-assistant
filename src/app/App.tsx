@@ -305,7 +305,7 @@ export function VideoFrameRateWorkbench() {
     : processingState === 'complete' ? '处理完成'
       : processingState === 'failed' ? '处理失败'
         : '等待开始处理';
-  const outputUrl = processingState === 'complete' ? job?.downloadUrl : undefined;
+  const outputUrl = processingState === 'complete' ? job?.previewUrl : undefined;
 
   return (
     <div className="videoFramePage">
@@ -381,8 +381,8 @@ export function VideoFrameRateWorkbench() {
         <section className="workspaceCard videoFramePanel videoFrameOutputPanel videoFrameOutputCard" aria-labelledby="video-output-title">
           <header className="videoFramePanelHeader">
             <h2 id="video-output-title">输出视频</h2>
-            {processingState === 'complete' && outputUrl ? (
-              <a className="videoFrameDownloadButton" download={job?.outputName ?? '处理后视频.mp4'} href={outputUrl}>下载视频</a>
+            {processingState === 'complete' && job?.downloadUrl ? (
+              <a className="videoFrameDownloadButton" download={job.outputName ?? '处理后视频.mp4'} href={job.downloadUrl}>下载视频</a>
             ) : <button disabled type="button">下载视频</button>}
           </header>
           <div className="videoFramePreview videoFrameOutputPreview">

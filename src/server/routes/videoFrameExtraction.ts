@@ -76,12 +76,22 @@ export function createVideoFrameExtractionRouter(manager: VideoFrameExtractionMa
     response.download(outputPath, job.outputName);
   });
 
+  router.get('/video-frame-extraction/:id/preview', (request, response) => {
+    const outputPath = manager.downloadPath(request.params.id);
+    if (!outputPath) {
+      response.status(404).json({ error: '视频尚未处理完成' });
+      return;
+    }
+    response.type('mp4').set('Content-Disposition', 'inline').sendFile(outputPath);
+  });
+
   return router;
 }
 
 function jobResponse(request: { baseUrl: string }, job: ReturnType<VideoFrameExtractionManager['get']> extends infer Result ? Exclude<Result, undefined> : never) {
   return {
     ...job,
+    previewUrl: job.status === 'complete' ? `${request.baseUrl}/video-frame-extraction/${job.id}/preview` : undefined,
     downloadUrl: job.status === 'complete' ? `${request.baseUrl}/video-frame-extraction/${job.id}/download` : undefined
   };
 }

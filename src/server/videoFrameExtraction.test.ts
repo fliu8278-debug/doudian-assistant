@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import express from 'express';
+import { createServer } from 'node:http';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { startServer } from './app';
+import { createVideoFrameExtractionRouter } from './routes/videoFrameExtraction';
 import { VideoFrameExtractionManager } from './videoFrameExtraction';
 
 describe('video frame extraction', () => {
@@ -43,6 +49,35 @@ describe('video frame extraction', () => {
       await expect(response.json()).resolves.toEqual({ error: '仅支持 MP4 视频文件' });
     } finally {
       await new Promise<void>((resolve, reject) => started.server.close((error) => error ? reject(error) : resolve()));
+    }
+  });
+
+  it('serves a completed output as an inline MP4 preview', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'doudian-preview-test-'));
+    const outputPath = join(directory, 'clip_15fps.mp4');
+    writeFileSync(outputPath, 'test mp4 content');
+    const manager = {
+      get: () => ({
+        id: 'job-1', status: 'complete' as const, progress: 100, targetFps: 15, outputName: 'clip_15fps.mp4'
+      }),
+      downloadPath: () => outputPath
+    } as unknown as VideoFrameExtractionManager;
+    const app = express();
+    app.use('/api', createVideoFrameExtractionRouter(manager));
+    const server = createServer(app);
+
+    try {
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const address = server.address();
+      const port = typeof address === 'object' && address ? address.port : 0;
+      const response = await fetch(`http://127.0.0.1:${port}/api/video-frame-extraction/job-1/preview`);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('video/mp4');
+      expect(response.headers.get('content-disposition')).toMatch(/^inline/);
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+      rmSync(directory, { recursive: true, force: true });
     }
   });
 });

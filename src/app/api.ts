@@ -9,6 +9,7 @@ export type VideoFrameExtractionJob = {
   outputSize?: number;
   duration?: number;
   error?: string;
+  previewUrl?: string;
   downloadUrl?: string;
 };
 
