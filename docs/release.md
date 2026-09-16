@@ -27,8 +27,8 @@
    git push origin v0.2.0
    ```
 
-5. 在私有源码仓库的 Actions 页面确认 **Release Windows** 成功。
-6. 在公开发布仓库的 Releases 页面确认存在安装包和 `latest.yml`。已安装的抖店助手会在下次启动时提示更新。
+5. 在私有源码仓库的 Actions 页面确认 **Release Windows** 成功。工作流会先创建草稿 Release，只有安装包、`.blockmap` 和 `latest.yml` 均上传成功后才标记为最新版本。
+6. 在公开发布仓库的 Releases 页面确认最新 Release 存在安装包和 `latest.yml`。已安装的抖店助手会在下次启动时提示更新。
 
 ## 安全边界
 

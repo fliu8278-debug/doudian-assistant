@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { registerAutoUpdaterIpc, startAutoUpdater } from './updater.cjs';
 
@@ -70,5 +71,11 @@ describe('startAutoUpdater', () => {
     expect(ipcMain.handle).toHaveBeenCalledWith('updater:set-background', expect.any(Function));
     const getState = ipcMain.handle.mock.calls.find(([channel]) => channel === 'updater:get-state')[1];
     expect(getState()).toMatchObject({ phase: 'idle', currentVersion: '0.1.1' });
+  });
+
+  it('publishes updater assets from the public release repository', () => {
+    const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
+
+    expect(packageJson.build.publish[0]).toMatchObject({ provider: 'github', repo: 'doudian-assistant-releases' });
   });
 });

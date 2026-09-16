@@ -74,8 +74,8 @@
       {
         "provider": "github",
         "owner": "fliu8278-debug",
-        "repo": "doudian-assistant",
-        "releaseType": "release"
+        "repo": "doudian-assistant-releases",
+        "releaseType": "draft"
       }
     ],
     "win": {
