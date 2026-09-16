@@ -13,8 +13,6 @@ jobs:
     runs-on: windows-latest
     env:
       GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
-      WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-      WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,7 +25,7 @@ jobs:
       - name: Verify release configuration
         shell: pwsh
         run: |
-          $missing = 'GH_TOKEN', 'WIN_CSC_LINK', 'WIN_CSC_KEY_PASSWORD' | Where-Object {
+          $missing = 'GH_TOKEN' | Where-Object {
             [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_))
           }
           if ($missing) { throw "Missing required release secrets: $($missing -join ', ')" }

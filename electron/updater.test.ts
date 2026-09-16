@@ -80,6 +80,7 @@ describe('startAutoUpdater', () => {
     const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 
     expect(packageJson.build.publish[0]).toMatchObject({ provider: 'github', repo: 'doudian-assistant-releases' });
+    expect(packageJson.build.win.verifyUpdateCodeSignature).toBe(false);
   });
 
   it('persists background downloads and opens the release page on demand', async () => {

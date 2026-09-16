@@ -3,10 +3,11 @@
 ## 一次性配置
 
 1. 在 GitHub 创建公开空仓库 `fliu8278-debug/doudian-assistant-releases`。它只用于 GitHub Releases，不能上传源码或本地数据。
-2. 创建 Fine-grained personal access token：仅选择该发布仓库，授予 **Contents: Read and write**，并把它保存为私有源码仓库 `doudian-assistant` 的 Actions Secret `GH_RELEASE_TOKEN`。
-3. 准备 Windows 代码签名证书。将证书安全引用或 Base64 内容保存为 `WIN_CSC_LINK`，将证书密码保存为 `WIN_CSC_KEY_PASSWORD`。两项均添加到私有源码仓库的 Actions Secrets。
+2. 创建可写入该公开发布仓库的 GitHub personal access token，并把它保存为私有源码仓库 `doudian-assistant` 的 Actions Secret `GH_RELEASE_TOKEN`。
 
-没有这三个 Secrets，发布工作流会失败，不会产生未签名的对外版本。
+没有 `GH_RELEASE_TOKEN`，发布工作流会失败。
+
+此版本用于分享给受信任的朋友：安装包未使用 Windows Authenticode 证书签名，Windows 首次安装时可能显示“未知发布者”。应用内更新仍会从公开发布仓库下载，但不会执行证书签名校验。
 
 ## 发布新版本
 
@@ -32,6 +33,6 @@
 
 ## 安全边界
 
-- 不要把 `GH_RELEASE_TOKEN`、签名证书或证书密码提交到 Git。
+- 不要把 `GH_RELEASE_TOKEN` 提交到 Git。
 - 不要将 `data/`、浏览器 Profile、Cookie 或 SQLite 数据库上传到公开发布仓库。
-- 证书更新时，先在测试机验证旧版本可以更新到新版本，再向用户发布。
+- 每次发布前，先在测试机验证旧版本可以更新到新版本，再向朋友发布。

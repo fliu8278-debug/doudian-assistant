@@ -1,6 +1,6 @@
 {
   "name": "doudian-tool",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "repository": {
@@ -80,7 +80,7 @@
     ],
     "win": {
       "target": ["nsis"],
-      "verifyUpdateCodeSignature": true
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "oneClick": false,
