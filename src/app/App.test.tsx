@@ -67,6 +67,13 @@ describe('应用侧边栏', () => {
     expect(markup).not.toContain('navGroupToggle');
   });
 
+  it('renders a Cockpit-style update action and settings card', () => {
+    const markup = renderToStaticMarkup(<App />);
+
+    expect(markup).toContain('检查更新');
+    expect(markup).toContain('软件更新');
+  });
+
   it('renders the shop overview and quick tools as separate dashboard cards', () => {
     const markup = renderToStaticMarkup(
       <ShopList loading={false} onChanged={async () => undefined} refreshedAt={null} refreshing={false} shops={[]} />

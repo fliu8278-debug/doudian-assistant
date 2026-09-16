@@ -4,7 +4,9 @@ import type { CouponBatch, CouponRow, NewcomerGiftBatch, NewcomerGiftRow, Shop }
 import { normalizeCouponRow, validateCouponBatchTime, validateCouponRow } from '../imports/couponRows';
 import { normalizeNewcomerGiftRow, validateNewcomerGiftRow } from '../imports/newcomerGiftRows';
 import { createCouponBatch, createNewcomerGiftBatch, createVideoFrameExtraction, getCouponBatch, getNewcomerGiftBatch, getShops, getVideoFrameExtraction, stopCouponBatch, stopNewcomerGiftBatch, type VideoFrameExtractionJob } from './api';
+import { UpdateDialog } from './components/UpdateDialog';
 import { ShopList } from './pages/shops/ShopList';
+import { updateActionLabel, useUpdater, type UpdateState } from './updater';
 
 type Page =
   | 'shops'
@@ -38,6 +40,8 @@ export function App() {
   const [refreshingShops, setRefreshingShops] = useState(false);
   const [shopsRefreshedAt, setShopsRefreshedAt] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const updater = useUpdater();
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   async function refreshShops() {
     setError('');
     setRefreshingShops(true);
@@ -62,6 +66,16 @@ export function App() {
     () => shops.find((shop) => shop.current) ?? shops[0],
     [shops]
   );
+  const updateAction = () => {
+    if (updater.state.phase === 'ready') {
+      void updater.restart();
+      return;
+    }
+    setShowUpdateDialog(true);
+    if (updater.state.phase === 'idle' || updater.state.phase === 'not-available' || updater.state.phase === 'error') {
+      void updater.check();
+    }
+  };
 
   return (
     <div className="app-shell">
@@ -73,6 +87,10 @@ export function App() {
             <span>本地工具</span>
           </div>
         </div>
+
+        <button className="sidebarUpdateAction" disabled={updater.state.phase === 'checking' || updater.state.phase === 'downloading'} onClick={updateAction} type="button">
+          <i aria-hidden="true">↻</i><span>软件更新</span><b>{updateActionLabel(updater.state)}</b>
+        </button>
 
         <nav className="sidebarNav" aria-label="主导航">
           <div className="sidebarNavGroup">
@@ -172,19 +190,27 @@ export function App() {
             title="执行记录"
           />
         ) : page === 'settings' ? (
-          <WorkspacePlaceholder
-            actionLabel="保存设置"
-            breadcrumb="设置"
-            description="管理本地工具的基础设置。"
-            emptyDescription="设置项会在这里展示。"
-            emptyTitle="还没有可修改的设置"
-            summary={[{ label: '当前店铺', value: currentShop ? '已选择' : '未选择' }, { label: '本地数据', value: '正常' }, { label: '版本', value: '0.1.0' }]}
-            title="设置"
-          />
+          <SettingsWorkbench onCheck={updateAction} onSetBackground={(enabled) => void updater.setBackground(enabled)} state={updater.state} />
         ) : (
           <CouponWorkbench currentShop={currentShop} shops={shops} />
         )}
       </main>
+      {showUpdateDialog ? <div className="updateDialogBackdrop" onMouseDown={() => setShowUpdateDialog(false)}><div onMouseDown={(event) => event.stopPropagation()}><UpdateDialog onCheck={() => void updater.check()} onDownload={() => void updater.download()} onRestart={() => void updater.restart()} state={updater.state} /></div></div> : null}
+      {updater.state.phase === 'ready' ? <div className="updateReadyToast"><span>新版本已下载完成</span><button onClick={() => void updater.restart()} type="button">重启更新</button></div> : null}
+    </div>
+  );
+}
+
+function SettingsWorkbench({ state, onCheck, onSetBackground }: { state: UpdateState; onCheck(): void; onSetBackground(enabled: boolean): void }) {
+  return (
+    <div className="workspacePage settingsWorkspace">
+      <div className="workspaceBreadcrumb">设置</div>
+      <header className="workspaceHeader"><div><h1>设置</h1><p>管理本地工具与软件更新。</p></div></header>
+      <section className="workspaceCard updateCard" aria-label="软件更新">
+        <div><span>软件更新</span><h2>当前版本 v{state.currentVersion}</h2><p>{state.version ? `发现新版本 v${state.version}` : '检查新版本并在下载完成后由你决定是否重启安装。'}</p></div>
+        <button className="primaryButton" onClick={onCheck} type="button">{updateActionLabel(state)}</button>
+        <label><input checked={Boolean(state.backgroundEnabled)} onChange={(event) => onSetBackground(event.target.checked)} type="checkbox" />后台自动下载更新</label>
+      </section>
     </div>
   );
 }

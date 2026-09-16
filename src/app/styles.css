@@ -100,6 +100,32 @@ button:disabled {
   font-size: 12px;
 }
 
+.sidebarUpdateAction {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 4px 8px;
+  width: calc(100% - 12px);
+  height: auto;
+  min-height: 52px;
+  margin: -10px 6px 18px;
+  border-color: #bed4f3;
+  background: #edf5ff;
+  color: #235f9f;
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.sidebarUpdateAction i {
+  grid-row: span 2;
+  align-self: center;
+  color: #1769e0;
+  font-size: 16px;
+  font-style: normal;
+}
+
+.sidebarUpdateAction span { font-size: 12px; font-weight: 700; }
+.sidebarUpdateAction b { color: #61748c; font-size: 11px; font-weight: 500; }
+
 .sidebarNav {
   display: grid;
   gap: 16px;
@@ -182,6 +208,76 @@ button:disabled {
   color: #71839a;
   font-size: 12px;
 }
+
+.updateCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px 24px;
+  align-items: center;
+  padding: 22px;
+}
+
+.updateCard span,
+.updateDialog header span { color: #1769e0; font-size: 12px; font-weight: 700; }
+.updateCard h2 { margin: 5px 0; font-size: 18px; }
+.updateCard p { margin: 0; color: #6b7a90; font-size: 13px; }
+.updateCard label { grid-column: 1 / -1; color: #52657d; font-size: 13px; }
+.updateCard input { margin-right: 7px; accent-color: #1769e0; }
+
+.updateDialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(31, 45, 61, 0.32);
+}
+
+.updateDialog {
+  width: min(480px, 100%);
+  border: 1px solid #d9e2ec;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(28, 45, 66, 0.24);
+  overflow: hidden;
+}
+
+.updateDialog header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid #e5ebf2;
+}
+
+.updateDialog h2 { margin: 5px 0 0; font-size: 20px; }
+.updateDialog header b { color: #718197; font-size: 12px; font-weight: 500; }
+.updateNotes, .updateError { margin: 16px 20px; color: #52657d; font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
+.updateError { color: #b54747; }
+.updateProgress { display: flex; align-items: center; gap: 10px; margin: 16px 20px; }
+.updateProgress progress { width: 100%; height: 8px; accent-color: #1769e0; }
+.updateDialog footer { display: flex; justify-content: flex-end; padding: 0 20px 20px; }
+
+.updateReadyToast {
+  position: fixed;
+  right: 24px;
+  bottom: 22px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #b9d5c5;
+  border-radius: 12px;
+  background: #f4fbf6;
+  box-shadow: 0 12px 34px rgba(28, 45, 66, 0.16);
+  padding: 12px 14px;
+  color: #17613e;
+  font-size: 13px;
+}
+
+.updateReadyToast button { height: 30px; border-color: #b9d5c5; background: #fff; color: #17613e; }
 
 .workspaceHeader {
   display: flex;
