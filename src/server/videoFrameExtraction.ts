@@ -82,13 +82,13 @@ export class VideoFrameExtractionManager {
     return job?.status === 'complete' && existsSync(job.outputPath) ? job.outputPath : undefined;
   }
 
-  commandFor(inputPath: string, outputPath: string, targetFps: number, audioCodec = 'copy') {
+  commandFor(inputPath: string, outputPath: string, targetFps: number) {
     return [
       '-y', '-i', inputPath,
       '-vf', `fps=${targetFps}`,
       '-map', '0:v:0', '-map', '0:a?',
-      '-c:v', 'mpeg4', '-q:v', '3',
-      '-c:a', audioCodec,
+      '-c:v', 'h264_mf', '-b:v', '5M',
+      '-c:a', 'aac',
       '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', outputPath
     ];
   }
@@ -106,11 +106,8 @@ export class VideoFrameExtractionManager {
 
   private async process(job: StoredJob, inputPath: string) {
     try {
-      const result = await this.run(job, inputPath, 'copy');
-      if (!result.ok) {
-        const retry = await this.run(job, inputPath, 'aac');
-        if (!retry.ok) throw new Error(retry.error);
-      }
+      const result = await this.run(job, inputPath);
+      if (!result.ok) throw new Error(result.error);
       const output = statSync(job.outputPath);
       job.status = 'complete';
       job.progress = 100;
@@ -121,9 +118,9 @@ export class VideoFrameExtractionManager {
     }
   }
 
-  private run(job: StoredJob, inputPath: string, audioCodec: 'copy' | 'aac') {
+  private run(job: StoredJob, inputPath: string) {
     return new Promise<{ ok: boolean; error: string }>((resolve) => {
-      const child = spawn(this.ffmpegPath, this.commandFor(inputPath, job.outputPath, job.targetFps, audioCodec), {
+      const child = spawn(this.ffmpegPath, this.commandFor(inputPath, job.outputPath, job.targetFps), {
         shell: false,
         windowsHide: true
       });

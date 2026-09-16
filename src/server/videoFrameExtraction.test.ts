@@ -19,11 +19,11 @@ describe('video frame extraction', () => {
     })).toThrow('目标帧率必须在 1 到 60 FPS 之间');
   });
 
-  it('creates an MP4 command with the built-in MPEG-4 encoder and optional audio', () => {
+  it('creates a Chromium-compatible H.264 MP4 command with AAC audio', () => {
     const manager = new VideoFrameExtractionManager({ ffmpegPath: 'ffmpeg.exe' });
 
     expect(manager.commandFor('input.mp4', 'output.mp4', 15)).toEqual(expect.arrayContaining([
-      '-vf', 'fps=15', '-map', '0:v:0', '-map', '0:a?', '-c:v', 'mpeg4', '-q:v', '3', '-c:a', 'copy'
+      '-vf', 'fps=15', '-map', '0:v:0', '-map', '0:a?', '-c:v', 'h264_mf', '-c:a', 'aac'
     ]));
   });
 
