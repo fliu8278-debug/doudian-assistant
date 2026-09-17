@@ -12,6 +12,15 @@ describe('应用侧边栏', () => {
     expect(markup).toContain('视频抽帧');
   });
 
+  it('uses SVG icons for sidebar navigation instead of font glyphs', () => {
+    const markup = renderToStaticMarkup(<App />);
+
+    expect(markup).toContain('data-icon="shop"');
+    expect(markup).toContain('data-icon="video"');
+    expect(markup).not.toContain('>▣<');
+    expect(markup).not.toContain('>▸<');
+  });
+
   it('提供紧凑的上传处理与输出视频工作区', () => {
     const markup = renderToStaticMarkup(<VideoFrameRateWorkbench />);
 

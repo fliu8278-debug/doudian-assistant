@@ -9,16 +9,9 @@ type Props = {
   onRestart(): void;
 };
 
-function formatBytes(bytes: number) {
-  return `${Math.round(bytes / 1024 / 1024)} MB`;
-}
-
 export function UpdateDialog({ state, onCheck, onClose, onDownload, onOpenRelease, onRestart }: Props) {
   const targetVersion = state.version ?? state.currentVersion;
   const percent = Math.max(0, Math.min(100, Math.round(state.percent ?? 0)));
-  const transferred = state.transferred ?? 0;
-  const total = state.total ?? 0;
-  const hasSize = total > 0 && transferred >= 0;
   const isSuccess = Boolean(state.justUpdated);
   const isReady = state.phase === 'ready';
   const isDownloading = state.phase === 'downloading';
@@ -31,7 +24,7 @@ export function UpdateDialog({ state, onCheck, onClose, onDownload, onOpenReleas
   return (
     <section aria-label="软件更新" aria-modal="true" className="updateDialog" role="dialog">
       <header className="updateDialogHeader">
-        <div className="updateDialogTitle"><span aria-hidden="true" className="updateDialogIcon">✣</span><h2>{title}</h2></div>
+        <div className="updateDialogTitle"><span aria-hidden="true" className="updateDialogIcon"><svg data-icon="update" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3.5 13.5 9l5.5 1.5-5.5 1.5-1.5 5.5-1.5-5.5L5.5 10.5 11 9l1-5.5Z" /><path d="m18 4 .5 1.5L20 6l-1.5.5L18 8l-.5-1.5L16 6l1.5-.5L18 4Z" /></svg></span><h2>{title}</h2></div>
         <button aria-label="关闭更新窗口" className="updateDialogClose" onClick={onClose} type="button">×</button>
       </header>
       <div className="updateDialogBody">
@@ -39,10 +32,8 @@ export function UpdateDialog({ state, onCheck, onClose, onDownload, onOpenReleas
         <p className="updateDialogSummary">{summary}</p>
         {isReady ? <p className="updateReadyNotice">✓ <strong>v{targetVersion} 已就绪，重启后生效。</strong></p> : null}
         {isDownloading ? <section aria-label={`下载进度 ${percent}%`} aria-live="polite" className="updateProgress">
-          <div className="updateProgressHead"><span>下载更新包</span><strong>{percent}%</strong></div>
-          <div aria-valuemax={100} aria-valuemin={0} aria-valuenow={percent} className="updateProgressTrack" role="progressbar"><i aria-hidden="true" style={{ width: `${percent}%` }} /></div>
-          {hasSize ? <div className="updateProgressMeta"><span>已下载 {formatBytes(transferred)}</span><span>共 {formatBytes(total)}</span></div> : null}
-          <div className="updateProgressStages"><span className="done">检查更新</span><span className="active">下载更新包</span><span>重启安装</span></div>
+          <div className="updateProgressRow"><div aria-valuemax={100} aria-valuemin={0} aria-valuenow={percent} className="updateProgressTrack" role="progressbar"><i aria-hidden="true" style={{ width: `${percent}%` }} /></div></div>
+          <span className="updateProgressText">下载中… {percent}%</span>
         </section> : null}
         {state.error ? <p className="updateError">{state.error}</p> : null}
         <div className="updateDialogRule" />
@@ -55,7 +46,7 @@ export function UpdateDialog({ state, onCheck, onClose, onDownload, onOpenReleas
         {isDownloading ? <button className="updateDialogPrimary" disabled type="button">下载中…</button> : null}
         {isReady ? <button className="updateDialogPrimary" onClick={onRestart} type="button">⟳ 立即重启</button> : null}
         {state.phase === 'error' ? <><button className="updateDialogSecondary" onClick={onOpenRelease} type="button">打开下载页</button><button className="updateDialogPrimary" onClick={onCheck} type="button">重试</button></> : null}
-        {isSuccess ? <button className="updateDialogPrimary" onClick={onClose} type="button">✣ 我知道了</button> : null}
+        {isSuccess ? <button className="updateDialogPrimary" onClick={onClose} type="button">✓ 我知道了</button> : null}
       </footer>
     </section>
   );

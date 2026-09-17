@@ -1,7 +1,7 @@
 :root {
   color: #1f2d3d;
   background: #eef3f8;
-  font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+  font-family: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -94,6 +94,12 @@ button:disabled {
   display: block;
 }
 
+.brand strong {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
 .brand span {
   margin-top: 2px;
   color: #6b7a90;
@@ -115,16 +121,14 @@ button:disabled {
   text-align: left;
 }
 
-.sidebarUpdateAction i {
+.sidebarUpdateAction .sidebarNavIcon {
   grid-row: span 2;
   align-self: center;
   color: #1769e0;
-  font-size: 16px;
-  font-style: normal;
 }
 
-.sidebarUpdateAction span { font-size: 12px; font-weight: 700; }
-.sidebarUpdateAction b { color: #61748c; font-size: 11px; font-weight: 500; }
+.sidebarUpdateAction span { font-size: 13px; font-weight: 600; line-height: 1.2; }
+.sidebarUpdateAction b { color: #61748c; font-size: 12px; font-weight: 400; line-height: 1.2; }
 
 .sidebarNav {
   display: grid;
@@ -139,8 +143,9 @@ button:disabled {
 .sidebarNavLabel {
   padding: 0 10px 4px;
   color: #8291a4;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .sidebarNavItem {
@@ -153,9 +158,11 @@ button:disabled {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #52657d;
+  color: #4f6076;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
   text-align: left;
 }
 
@@ -163,12 +170,15 @@ button:disabled {
   background: #edf4fb;
 }
 
-.sidebarNavItem i {
+.sidebarNavIcon {
   width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
   color: #61748c;
-  font-size: 15px;
-  font-style: normal;
-  text-align: center;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .sidebarNavItem.active {
@@ -178,7 +188,7 @@ button:disabled {
   font-weight: 600;
 }
 
-.sidebarNavItem.active i {
+.sidebarNavItem.active .sidebarNavIcon {
   color: #1769e0;
 }
 
@@ -234,10 +244,13 @@ button:disabled {
   background: rgba(26, 41, 59, 0.42);
 }
 
+.updateDialogBackdrop > div { width: min(720px, calc(100vw - 48px)); }
+
 .updateDialog {
   display: flex;
-  width: min(660px, 100%);
-  max-height: calc(100dvh - 40px);
+  width: 100%;
+  min-height: 420px;
+  max-height: 85dvh;
   flex-direction: column;
   border: 1px solid #dce5ef;
   border-radius: 20px;
@@ -250,37 +263,29 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 82px;
-  padding: 21px 28px;
+  padding: 24px 28px;
   border-bottom: 1px solid #e8edf3;
 }
 
 .updateDialogTitle { display: flex; align-items: center; gap: 12px; }
-.updateDialogIcon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: #1769e0; color: #fff; font-size: 20px; font-weight: 700; }
-.updateDialog h2 { margin: 0; font-size: 21px; line-height: 1.2; }
+.updateDialogIcon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: #1769e0; color: #fff; }
+.updateDialogIcon svg { width: 20px; height: 20px; color: #fff; }
+.updateDialog h2 { margin: 0; font-size: 20px; line-height: 1.2; }
 .updateDialogClose { width: 32px; height: 32px; border: 0; border-radius: 7px; background: transparent; color: #60738b; font-size: 25px; line-height: 1; }
 .updateDialogClose:hover { background: #f1f5fa; color: #20364f; }
-.updateDialogBody { min-height: 0; padding: 25px 28px 20px; overflow: auto; }
+.updateDialogBody { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 8px; padding: 28px; overflow: auto; }
 .updateDialogVersion { color: #1769e0; font-size: 14px; font-weight: 800; }
-.updateDialogSummary { margin: 11px 0 0; color: #5e7088; font-size: 14px; line-height: 1.6; }
-.updateReadyNotice { margin: 16px 0 0; border-radius: 9px; background: #e9f8ef; padding: 12px 14px; color: #16824c; font-size: 14px; }
-.updateDialogRule { height: 1px; margin: 23px 0 15px; background: #e6ecf3; }
-.updateDialog h3 { margin: 0 0 10px; color: #2d3e53; font-size: 14px; }
-.updateDialogNotes { max-height: 190px; overflow: auto; padding-right: 12px; color: #5d6e84; font-size: 13px; line-height: 1.75; white-space: pre-wrap; }
-.updateError { margin: 16px 0 0; color: #b54747; font-size: 13px; line-height: 1.6; }
-.updateProgress { margin: 20px 0 0; }
-.updateProgressHead, .updateProgressMeta, .updateProgressStages { display: flex; align-items: center; justify-content: space-between; }
-.updateProgressHead { color: #52657d; font-size: 13px; }
-.updateProgressHead strong { color: #1769e0; font-size: 20px; font-variant-numeric: tabular-nums; }
-.updateProgressTrack { height: 8px; margin-top: 9px; overflow: hidden; border-radius: 999px; background: #eaf0f7; box-shadow: inset 0 1px 2px rgba(28, 45, 66, 0.08); }
+.updateDialogSummary { margin: 0; color: #5e7088; font-size: 14px; line-height: 1.6; }
+.updateReadyNotice { margin: 4px 0; border-radius: 8px; background: #e9f8ef; padding: 10px 12px; color: #16824c; font-size: 13px; }
+.updateDialogRule { height: 1px; margin: 4px 0 0; background: #e6ecf3; }
+.updateDialog h3 { margin: 0; color: #2d3e53; font-size: 13px; }
+.updateDialogNotes { max-height: 200px; overflow: auto; padding-right: 8px; color: #5d6e84; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+.updateError { margin: 4px 0; color: #b54747; font-size: 13px; line-height: 1.6; }
+.updateProgress { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
+.updateProgressRow { display: flex; align-items: center; gap: 8px; }
+.updateProgressTrack { height: 6px; flex: 1; overflow: hidden; border-radius: 3px; background: #eaf0f7; }
 .updateProgressTrack i { display: block; height: 100%; border-radius: inherit; background: #1769e0; }
-.updateProgressMeta { margin-top: 8px; color: #718197; font-size: 12px; font-variant-numeric: tabular-nums; }
-.updateProgressStages { justify-content: flex-start; gap: 12px; margin-top: 14px; color: #8a98aa; font-size: 12px; }
-.updateProgressStages span::before { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #cad5e2; content: ''; }
-.updateProgressStages .done { color: #397456; }
-.updateProgressStages .done::before { background: #34a469; }
-.updateProgressStages .active { color: #1769e0; font-weight: 700; }
-.updateProgressStages .active::before { background: #1769e0; }
+.updateProgressText { color: #8190a2; font-size: 12px; text-align: center; }
 .updateDialogFooter { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 19px 28px; border-top: 1px solid #dae4ef; background: #f3f7fc; }
 .updateDialogSecondary, .updateDialogPrimary { height: 40px; border-radius: 10px; padding: 0 17px; font-weight: 700; }
 .updateDialogSecondary { border: 1px solid #d6e0ec; background: #fff; color: #3b5674; }
@@ -292,6 +297,7 @@ button:disabled {
 .videoFrameModePicker button.active { border-color: #1769e0; background: #f1f7ff; color: #1769e0; }
 @media (max-width: 560px) {
   .updateDialogBackdrop { padding: 12px; }
+  .updateDialogBackdrop > div { width: 100%; }
   .updateDialogHeader, .updateDialogBody, .updateDialogFooter { padding-right: 20px; padding-left: 20px; }
   .updateDialogFooter { gap: 8px; }
   .updateDialogSecondary, .updateDialogPrimary { padding: 0 12px; }

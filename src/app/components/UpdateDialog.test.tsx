@@ -3,7 +3,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { UpdateDialog } from './UpdateDialog';
 
 describe('UpdateDialog', () => {
-  it('shows progress while an update downloads', () => {
+  it('uses an inline SVG for the update icon instead of a font glyph', () => {
+    const markup = renderToStaticMarkup(<UpdateDialog
+      onCheck={vi.fn()} onDownload={vi.fn()} onOpenRelease={vi.fn()} onRestart={vi.fn()}
+      state={{ phase: 'available', currentVersion: '0.1.1', version: '0.1.2' }}
+    />);
+
+    expect(markup).toContain('data-icon="update"');
+    expect(markup).toContain('viewBox="0 0 24 24"');
+  });
+
+  it('uses the Cockpit-style progress layout while an update downloads', () => {
     const markup = renderToStaticMarkup(<UpdateDialog
       onCheck={vi.fn()}
       onDownload={vi.fn()}
@@ -16,19 +26,15 @@ describe('UpdateDialog', () => {
     />);
 
     expect(markup).toContain('发现新版本');
-    expect(markup).toContain('下载更新包');
-    expect(markup).toContain('42%');
-    expect(markup).toContain('已下载 42 MB');
-    expect(markup).toContain('共 100 MB');
-    expect(markup).toContain('检查更新');
-    expect(markup).toContain('重启安装');
+    expect(markup).toContain('下载中… 42%');
+    expect(markup).toContain('updateProgressText');
     expect(markup).not.toContain('<progress');
   });
 
-  it('hides download sizes when the updater does not report them', () => {
+  it('does not add transfer figures to the reference progress layout', () => {
     const markup = renderToStaticMarkup(<UpdateDialog
       onCheck={vi.fn()} onDownload={vi.fn()} onOpenRelease={vi.fn()} onRestart={vi.fn()}
-      state={{ phase: 'downloading', currentVersion: '0.1.1', percent: 7, version: '0.1.2' }}
+      state={{ phase: 'downloading', currentVersion: '0.1.1', percent: 7, version: '0.1.2', transferred: 7 * 1024 * 1024, total: 100 * 1024 * 1024 }}
     />);
 
     expect(markup).not.toContain('已下载');

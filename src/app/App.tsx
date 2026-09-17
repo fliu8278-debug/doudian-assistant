@@ -93,35 +93,35 @@ export function App() {
         </div>
 
         <button className="sidebarUpdateAction" disabled={updater.state.phase === 'checking' || updater.state.phase === 'downloading'} onClick={updateAction} type="button">
-          <i aria-hidden="true">↻</i><span>软件更新</span><b>{updateActionLabel(updater.state)}</b>
+          <NavIcon name="refresh" /><span>软件更新</span><b>{updateActionLabel(updater.state)}</b>
         </button>
 
         <nav className="sidebarNav" aria-label="主导航">
           <div className="sidebarNavGroup">
             <span className="sidebarNavLabel">店铺</span>
-            <button className={navClass(page === 'shops', 'sidebarNavItem')} onClick={() => setPage('shops')} type="button"><i aria-hidden="true">▣</i>店铺列表</button>
-            <button className={navClass(page === 'accountStatus', 'sidebarNavItem')} onClick={() => setPage('accountStatus')} type="button"><i aria-hidden="true">◉</i>账号状态</button>
+            <button className={navClass(page === 'shops', 'sidebarNavItem')} onClick={() => setPage('shops')} type="button"><NavIcon name="shop" />店铺列表</button>
+            <button className={navClass(page === 'accountStatus', 'sidebarNavItem')} onClick={() => setPage('accountStatus')} type="button"><NavIcon name="account" />账号状态</button>
           </div>
           <div className="sidebarNavGroup">
             <span className="sidebarNavLabel">营销</span>
-            <button className={navClass(page === 'coupon', 'sidebarNavItem')} onClick={() => setPage('coupon')} type="button"><i aria-hidden="true">✦</i>建立优惠券</button>
-            <button className={navClass(page === 'newcomerGift', 'sidebarNavItem')} onClick={() => setPage('newcomerGift')} type="button"><i aria-hidden="true">◌</i>新人礼金</button>
+            <button className={navClass(page === 'coupon', 'sidebarNavItem')} onClick={() => setPage('coupon')} type="button"><NavIcon name="coupon" />建立优惠券</button>
+            <button className={navClass(page === 'newcomerGift', 'sidebarNavItem')} onClick={() => setPage('newcomerGift')} type="button"><NavIcon name="gift" />新人礼金</button>
           </div>
           <div className="sidebarNavGroup">
             <span className="sidebarNavLabel">商品</span>
-            <button className={navClass(page === 'productSearch', 'sidebarNavItem')} onClick={() => setPage('productSearch')} type="button"><i aria-hidden="true">⌕</i>商品搜索</button>
-            <button className={navClass(page === 'titleCheck', 'sidebarNavItem')} onClick={() => setPage('titleCheck')} type="button"><i aria-hidden="true">▤</i>标题检查</button>
+            <button className={navClass(page === 'productSearch', 'sidebarNavItem')} onClick={() => setPage('productSearch')} type="button"><NavIcon name="search" />商品搜索</button>
+            <button className={navClass(page === 'titleCheck', 'sidebarNavItem')} onClick={() => setPage('titleCheck')} type="button"><NavIcon name="list" />标题检查</button>
           </div>
           <div className="sidebarNavGroup">
             <span className="sidebarNavLabel">视频</span>
-            <button className={navClass(page === 'videoFrameExtraction', 'sidebarNavItem')} onClick={() => setPage('videoFrameExtraction')} type="button"><i aria-hidden="true">▸</i>视频抽帧</button>
+            <button className={navClass(page === 'videoFrameExtraction', 'sidebarNavItem')} onClick={() => setPage('videoFrameExtraction')} type="button"><NavIcon name="video" />视频抽帧</button>
           </div>
         </nav>
 
         <div className="sidebarFooter">
-          <button className={navClass(page === 'tableTemplates', 'sidebarNavItem')} onClick={() => setPage('tableTemplates')} type="button"><i aria-hidden="true">▤</i>表格模板</button>
-          <button className={navClass(page === 'executionRecords', 'sidebarNavItem')} onClick={() => setPage('executionRecords')} type="button"><i aria-hidden="true">◷</i>执行记录</button>
-          <button className={navClass(page === 'settings', 'sidebarNavItem')} onClick={() => setPage('settings')} type="button"><i aria-hidden="true">⚙</i>设置</button>
+          <button className={navClass(page === 'tableTemplates', 'sidebarNavItem')} onClick={() => setPage('tableTemplates')} type="button"><NavIcon name="table" />表格模板</button>
+          <button className={navClass(page === 'executionRecords', 'sidebarNavItem')} onClick={() => setPage('executionRecords')} type="button"><NavIcon name="history" />执行记录</button>
+          <button className={navClass(page === 'settings', 'sidebarNavItem')} onClick={() => setPage('settings')} type="button"><NavIcon name="settings" />设置</button>
         </div>
       </aside>
 
@@ -451,6 +451,26 @@ function formatVideoDuration(seconds: number) {
 
 function navClass(active: boolean, base = 'navItem') {
   return active ? `${base} active` : base;
+}
+
+type NavIconName = 'account' | 'coupon' | 'gift' | 'history' | 'list' | 'refresh' | 'search' | 'settings' | 'shop' | 'table' | 'video';
+
+function NavIcon({ name }: { name: NavIconName }) {
+  const paths: Record<NavIconName, string[]> = {
+    account: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z', 'M4.5 20a7.5 7.5 0 0 1 15 0'],
+    coupon: ['M4 8.5A2.5 2.5 0 0 0 6.5 6H18v4a2 2 0 1 1 0 4v4H6.5A2.5 2.5 0 0 0 4 15.5Z', 'M10 6v12'],
+    gift: ['M5 10h14v10H5z', 'M3.5 7.5h17v3h-17z', 'M12 7.5V20', 'M12 7.5S8 7.5 8 5.25C8 3.5 10.4 4 12 7.5Zm0 0s4 0 4-2.25C16 3.5 13.6 4 12 7.5Z'],
+    history: ['M4 12a8 8 0 1 0 2.35-5.65L4 8.7', 'M4 4v4.7h4.7', 'M12 7.5V12l3 2'],
+    list: ['M8 6h11', 'M8 12h11', 'M8 18h11', 'M4.5 6h.01', 'M4.5 12h.01', 'M4.5 18h.01'],
+    refresh: ['M19 8a7 7 0 1 0 1 5', 'M19 4v4h-4'],
+    search: ['m20 20-4.5-4.5', 'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Z'],
+    settings: ['M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z', 'M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.1 2.1-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56v.1H11.8v-.1a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-2.1-2.1.06-.06A1.7 1.7 0 0 0 7.13 15a1.7 1.7 0 0 0-1.56-1.03h-.1v-2.94h.1A1.7 1.7 0 0 0 7.13 10a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.1-2.1.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.8 4.8v-.1h2.94v.1a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.1 2.1-.06.06A1.7 1.7 0 0 0 19.4 10a1.7 1.7 0 0 0 1.56 1.03h.1v2.94h-.1A1.7 1.7 0 0 0 19.4 15Z'],
+    shop: ['M4 10V6l2-3h12l2 3v4', 'M5 10h14v10H5z', 'M9 20v-6h6v6', 'M4 6h16'],
+    table: ['M4 5h16v14H4z', 'M4 10h16', 'M10 5v14'],
+    video: ['M4 6h11v12H4z', 'm15 10 5-3v10l-5-3']
+  };
+
+  return <svg aria-hidden="true" className="sidebarNavIcon" data-icon={name} fill="none" viewBox="0 0 24 24">{paths[name].map((path) => <path d={path} key={path} />)}</svg>;
 }
 
 function NewcomerGiftWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Shop[] }) {
