@@ -569,6 +569,202 @@ button:disabled {
   font-size: 15px;
 }
 
+.videoFrameQueue {
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #e1eaf4;
+  border-radius: 8px;
+}
+
+.videoFrameQueue header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 0 10px;
+  background: #f7faff;
+  color: #526980;
+  font-size: 13px;
+}
+
+.videoFrameQueue header span,
+.videoFrameQueueRow small,
+.videoFrameTaskRow small {
+  color: #8291a4;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.videoFrameQueueRows {
+  max-height: 176px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  scrollbar-color: #bdd4ef transparent;
+  scrollbar-width: thin;
+}
+
+.videoFrameQueueRows::-webkit-scrollbar,
+.videoFrameTaskList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.videoFrameQueueRows::-webkit-scrollbar-thumb,
+.videoFrameTaskList::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #bdd4ef;
+  background-clip: content-box;
+}
+
+.videoFrameQueueRows::-webkit-scrollbar-track,
+.videoFrameTaskList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.videoFrameQueueRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 6px 9px;
+  border-top: 1px solid #edf2f7;
+}
+
+.videoFrameQueuePreviewButton {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 46px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: auto;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.videoFrameQueuePreviewButton:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.videoFrameQueueRow.complete .videoFrameQueuePreviewButton {
+  cursor: pointer;
+}
+
+.videoFrameQueueRow.complete:hover,
+.videoFrameQueueRow.selected {
+  background: #f3f8ff;
+}
+
+.videoFrameQueueRow.selected {
+  box-shadow: inset 3px 0 0 #1769e0;
+}
+
+.videoFrameQueuePreviewButton > span:nth-child(2),
+.videoFrameTaskRow > span:first-child {
+  min-width: 0;
+}
+
+.videoFrameQueueRow strong,
+.videoFrameQueueRow small,
+.videoFrameTaskRow strong,
+.videoFrameTaskRow small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.videoFrameQueueRow strong,
+.videoFrameTaskRow strong {
+  color: #354a63;
+  font-size: 12px;
+}
+
+.videoFrameQueueProgress {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  color: #4f82c6;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.videoFrameQueueRing {
+  width: 25px;
+  height: 25px;
+  position: relative;
+  border-radius: 50%;
+  background: conic-gradient(#9dc8ff var(--progress, 0%), #eaf3ff 0);
+}
+
+.videoFrameQueueRing::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.videoFrameQueueRow.processing .videoFrameQueueRing {
+  background: conic-gradient(#9dc8ff 0 28%, #eaf3ff 28% 100%);
+  animation: videoFrameQueueSpin 950ms linear infinite;
+}
+
+.videoFrameQueueRow.complete .videoFrameQueueProgress {
+  color: #4f9f72;
+}
+
+.videoFrameQueueRow.complete .videoFrameQueueRing {
+  background: conic-gradient(#9eddb8 var(--progress, 100%), #e9f8ef 0);
+}
+
+.videoFrameQueueRow.failed .videoFrameQueueProgress {
+  color: #d97878;
+}
+
+.videoFrameQueueRow.failed .videoFrameQueueRing {
+  background: conic-gradient(#f0a3a3 var(--progress, 100%), #fff0f0 0);
+}
+
+.videoFrameFileIcon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: #edf5ff;
+  color: #1769e0;
+}
+
+.videoFrameFileIcon svg,
+.videoFrameRemoveButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.videoFrameRemoveButton {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #8c9daf;
+}
+
+.videoFrameRemoveButton:hover:not(:disabled) {
+  background: #fff1f1;
+  color: #bb3838;
+}
+
 .videoFrameUpload span,
 .videoFrameSettings p,
 .videoFrameProgress p,
@@ -702,6 +898,19 @@ button:disabled {
   gap: 10px;
 }
 
+.videoFrameSourceStatus {
+  margin-top: auto;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: #f3f7fb;
+  color: #6b7a90;
+  font-size: 13px;
+}
+
+.videoFrameSourceStatus b {
+  color: #1769e0;
+}
+
 .videoFramePanelHeader,
 .videoFrameProgressTitle {
   display: flex;
@@ -735,6 +944,13 @@ button:disabled {
   font-size: 14px;
   text-align: center;
   pointer-events: none;
+}
+
+.videoFrameOutputPreview span small {
+  display: block;
+  margin-top: 5px;
+  color: #acb9c8;
+  font-size: 12px;
 }
 
 .videoFrameProgress {
@@ -797,6 +1013,75 @@ button:disabled {
 .videoFrameOutputInfo {
   padding-top: 10px;
   border-top: 1px solid #dce7f2;
+}
+
+.videoFrameTaskList {
+  max-height: 260px;
+  min-height: 0;
+  overflow: auto;
+  padding-top: 9px;
+  border-top: 1px solid #dce7f2;
+  scrollbar-gutter: stable;
+  scrollbar-color: #bdd4ef transparent;
+  scrollbar-width: thin;
+}
+
+.videoFrameTaskList h3 {
+  margin-bottom: 6px;
+}
+
+.videoFrameTaskEmpty {
+  margin: 0;
+  padding: 10px 0;
+  color: #8291a4;
+  font-size: 13px;
+}
+
+.videoFrameTaskRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 43px;
+  padding: 6px 0;
+  border-top: 1px solid #edf2f7;
+}
+
+.videoFrameTaskRow em {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #617890;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.videoFrameTaskRow em i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #afbdd0;
+}
+
+.videoFrameTaskRow.processing em { color: #1769e0; }
+.videoFrameTaskRow.processing em i { background: #1769e0; animation: liveDot 1s ease-in-out infinite; }
+.videoFrameTaskRow.complete em { color: #168d4c; }
+.videoFrameTaskRow.complete em i { background: #35aa6e; }
+.videoFrameTaskRow.failed em { color: #a32626; }
+.videoFrameTaskRow.failed em i { background: #cf4c4c; }
+
+.videoFrameTaskRow b,
+.videoFrameTaskRow a {
+  min-width: 42px;
+  color: #617890;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.videoFrameTaskRow a {
+  color: #1769e0;
+  text-decoration: none;
 }
 
 .videoFrameOutputInfo h3 {
@@ -2466,6 +2751,12 @@ td:last-child {
   50% {
     opacity: 1;
     transform: scale(1.35);
+  }
+}
+
+@keyframes videoFrameQueueSpin {
+  to {
+    transform: rotate(360deg);
   }
 }
 

@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import * as XLSX from 'xlsx';
 import type { CouponBatch, CouponRow, NewcomerGiftBatch, NewcomerGiftRow, Shop } from '../shared/types';
 import { normalizeCouponRow, validateCouponBatchTime, validateCouponRow } from '../imports/couponRows';
 import { normalizeNewcomerGiftRow, validateNewcomerGiftRow } from '../imports/newcomerGiftRows';
-import { createCouponBatch, createNewcomerGiftBatch, createVideoFrameExtraction, getCouponBatch, getNewcomerGiftBatch, getShops, getVideoFrameExtraction, stopCouponBatch, stopNewcomerGiftBatch, type VideoFrameExtractionJob } from './api';
+import { createCouponBatch, createNewcomerGiftBatch, createVideoFrameExtraction, getCouponBatch, getNewcomerGiftBatch, getShops, getVideoFrameExtraction, stopCouponBatch, stopNewcomerGiftBatch } from './api';
 import { UpdateDialog } from './components/UpdateDialog';
 import { ShopList } from './pages/shops/ShopList';
 import { updateActionLabel, useUpdater, type UpdateState } from './updater';
+import { runVideoFrameBatch, type VideoFrameBatchTask } from './videoFrameBatch';
 
 type Page =
   | 'shops'
@@ -249,87 +250,80 @@ export function WorkspacePlaceholder(props: {
   );
 }
 
-type VideoProcessingState = 'idle' | 'processing' | 'complete' | 'failed';
-
 export function VideoFrameRateWorkbench() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pollTimerRef = useRef<number | null>(null);
   const requestVersionRef = useRef(0);
-  const [sourceFile, setSourceFile] = useState<File | null>(null);
-  const [sourceUrl, setSourceUrl] = useState('');
+  const [sourceFiles, setSourceFiles] = useState<File[]>([]);
   const [frameDropMode, setFrameDropMode] = useState<'random' | 'interval'>('random');
   const [frameDropValue, setFrameDropValue] = useState(1);
-  const [processingState, setProcessingState] = useState<VideoProcessingState>('idle');
-  const [job, setJob] = useState<VideoFrameExtractionJob | null>(null);
-  const [processingError, setProcessingError] = useState('');
+  const [tasks, setTasks] = useState<VideoFrameBatchTask[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedTaskKey, setSelectedTaskKey] = useState('');
 
   useEffect(() => () => {
-    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
     if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
-  }, [sourceUrl]);
+  }, []);
 
-  function chooseVideo(file: File | undefined) {
-    if (!file) return;
+  function chooseVideos(files: FileList | null) {
+    if (!files?.length) return;
     requestVersionRef.current += 1;
     if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
-    setSourceFile(file);
-    setSourceUrl(URL.createObjectURL(file));
-    setProcessingState('idle');
-    setJob(null);
-    setProcessingError('');
+    const added = Array.from(files);
+    setSourceFiles((current) => [...current, ...added.filter((file) => !current.some((item) => item.name === file.name && item.size === file.size && item.lastModified === file.lastModified))]);
+    setTasks([]);
+    setSelectedTaskKey('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   async function startProcessing() {
-    if (!sourceFile) return;
+    if (!sourceFiles.length) return;
     const requestVersion = requestVersionRef.current + 1;
     requestVersionRef.current = requestVersion;
     if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
-    setProcessingState('processing');
-    setJob(null);
-    setProcessingError('');
-
-    try {
-      const created = await createVideoFrameExtraction(sourceFile, { mode: frameDropMode, value: frameDropValue });
-      if (requestVersion !== requestVersionRef.current) return;
-      setJob(created);
-      void pollJob(created.id, requestVersion);
-    } catch (error) {
-      if (requestVersion !== requestVersionRef.current) return;
-      setProcessingState('failed');
-      setProcessingError(error instanceof Error ? error.message : '视频处理任务创建失败');
-    }
+    setIsProcessing(true);
+    await runVideoFrameBatch(sourceFiles, { mode: frameDropMode, value: frameDropValue }, {
+      create: createVideoFrameExtraction,
+      get: getVideoFrameExtraction,
+      onUpdate: (nextTasks) => {
+        if (requestVersion === requestVersionRef.current) setTasks(nextTasks);
+      },
+      pause: () => new Promise((resolve) => {
+        pollTimerRef.current = window.setTimeout(resolve, 1000);
+      }),
+      shouldStop: () => requestVersion !== requestVersionRef.current
+    });
+    if (requestVersion === requestVersionRef.current) setIsProcessing(false);
   }
 
-  async function pollJob(jobId: string, requestVersion: number): Promise<void> {
-    try {
-      const nextJob = await getVideoFrameExtraction(jobId);
-      if (requestVersion !== requestVersionRef.current) return;
-      setJob(nextJob);
-      if (nextJob.status === 'complete') {
-        setProcessingState('complete');
-        return;
-      }
-      if (nextJob.status === 'failed') {
-        setProcessingState('failed');
-        setProcessingError(nextJob.error ?? '视频处理失败，请更换视频后重试');
-        return;
-      }
-      pollTimerRef.current = window.setTimeout(() => void pollJob(jobId, requestVersion), 1000);
-    } catch (error) {
-      if (requestVersion !== requestVersionRef.current) return;
-      setProcessingState('failed');
-      setProcessingError(error instanceof Error ? error.message : '无法读取视频处理进度');
-    }
+  function removeFile(file: File) {
+    if (isProcessing) return;
+    setSourceFiles((current) => current.filter((item) => item !== file));
+    setTasks([]);
+    setSelectedTaskKey('');
   }
 
-  const progress = job?.progress ?? (processingState === 'processing' ? 1 : processingState === 'complete' ? 100 : 0);
-  const status = processingState === 'processing'
-    ? progress < 5 ? '正在上传视频' : '正在重新编码'
-    : processingState === 'complete' ? '处理完成'
-      : processingState === 'failed' ? '处理失败'
+  function downloadAll() {
+    tasks.filter((task) => task.status === 'complete' && task.job?.downloadUrl).forEach((task) => {
+      const link = document.createElement('a');
+      link.href = task.job!.downloadUrl!;
+      link.download = task.job!.outputName || `${task.file.name}.mp4`;
+      link.click();
+    });
+  }
+
+  const processingTask = tasks.find((task) => task.status === 'processing');
+  const previewTask = resolveVideoFramePreviewTask(tasks, selectedTaskKey);
+  const previewTaskKey = previewTask ? videoFrameTaskKey(previewTask.file) : '';
+  const taskByKey = new Map(tasks.map((task) => [videoFrameTaskKey(task.file), task]));
+  const completeTasks = tasks.filter((task) => task.status === 'complete');
+  const progress = sourceFiles.length ? Math.round(tasks.reduce((sum, task) => sum + (task.status === 'complete' || task.status === 'failed' ? 100 : task.job?.progress ?? 0), 0) / sourceFiles.length) : 0;
+  const currentProgress = processingTask?.job?.progress ?? 0;
+  const status = processingTask
+    ? `正在处理第 ${tasks.indexOf(processingTask) + 1} 条视频：${currentProgress < 5 ? '上传中' : '重新编码中'}`
+    : completeTasks.length === sourceFiles.length && sourceFiles.length > 0 ? '全部处理完成'
+      : tasks.some((task) => task.status === 'failed') ? '部分视频处理失败，其余任务已继续执行'
         : '等待开始处理';
-  const outputUrl = processingState === 'complete' ? job?.previewUrl : undefined;
   const settingLabel = frameDropMode === 'random' ? `随机删除 ${frameDropValue} 帧` : `每隔 ${frameDropValue} 秒删除 1 帧`;
 
   return (
@@ -344,35 +338,44 @@ export function VideoFrameRateWorkbench() {
       <section className="videoFrameGrid" aria-label="视频抽帧工作区">
         <section className="workspaceCard videoFramePanel videoFrameSourcePanel videoFrameSourceCard" aria-labelledby="video-source-title">
           <h2 id="video-source-title">上传与处理</h2>
-          {sourceUrl ? (
-            <div className="videoFramePreview videoFrameSourcePreview">
-              <video
-                className="videoFramePlayer"
-                controls
-                src={sourceUrl}
-              />
-              <button className="videoFrameReplaceButton" onClick={() => fileInputRef.current?.click()} type="button">更换视频</button>
-              <input
-                ref={fileInputRef}
-                accept="video/mp4"
-                className="hiddenInput"
-                onChange={(event) => chooseVideo(event.target.files?.[0])}
-                type="file"
-              />
+          <label className="videoFrameUpload">
+            <strong>批量上传 MP4 视频</strong>
+            <span>点击选择文件，可一次添加多个素材</span>
+            <input ref={fileInputRef} accept="video/mp4" className="hiddenInput" multiple onChange={(event) => chooseVideos(event.target.files)} type="file" />
+          </label>
+
+          {sourceFiles.length ? <section className="videoFrameQueue" aria-label="已添加素材">
+            <header><strong>已添加素材</strong><span>{sourceFiles.length} 个</span></header>
+            <div className="videoFrameQueueRows">
+              {sourceFiles.map((file) => {
+                const fileKey = videoFrameTaskKey(file);
+                const task = taskByKey.get(fileKey);
+                const rowStatus = task?.status ?? 'queued';
+                const canPreview = rowStatus === 'complete';
+                const selected = canPreview && previewTaskKey === fileKey;
+                const statusLabel = rowStatus === 'queued' ? '等待处理' : rowStatus === 'processing' ? '处理中' : rowStatus === 'complete' ? '已完成' : '处理失败';
+                const queueProgress = resolveVideoFrameQueueProgress(task);
+                return <div className={`videoFrameQueueRow ${rowStatus}${selected ? ' selected' : ''}`} key={fileKey}>
+                  <button
+                    aria-label={canPreview ? `查看 ${file.name} 的处理结果` : `${file.name} ${statusLabel} ${queueProgress.label}`}
+                    aria-pressed={canPreview ? selected : undefined}
+                    className="videoFrameQueuePreviewButton"
+                    disabled={!canPreview}
+                    onClick={() => setSelectedTaskKey(fileKey)}
+                    type="button"
+                  >
+                    <span className="videoFrameFileIcon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3h6l4 4v11.5a2.5 2.5 0 0 1-2.5 2.5h-7.5A2.5 2.5 0 0 1 5 18.5v-13Z" stroke="currentColor" strokeWidth="1.8"/><path d="M13.5 3v4h4M9 15.5l2-2 2 1.5 2-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+                    <span><strong>{file.name}</strong><small>{canPreview ? '点击查看处理结果' : formatFileSize(file.size)}</small></span>
+                    <span className="videoFrameQueueProgress" title={statusLabel}>
+                      <i aria-hidden="true" className="videoFrameQueueRing" style={{ '--progress': `${queueProgress.value}%` } as CSSProperties} />
+                      <small>{queueProgress.label}</small>
+                    </span>
+                  </button>
+                  <button aria-label={`移除 ${file.name}`} className="videoFrameRemoveButton" disabled={isProcessing} onClick={() => removeFile(file)} type="button"><svg viewBox="0 0 24 24" fill="none"><path d="m7 7 10 10M17 7 7 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg></button>
+                </div>;
+              })}
             </div>
-          ) : (
-            <label className="videoFrameUpload">
-              <strong>上传 MP4 视频</strong>
-              <span>点击选择文件</span>
-              <input
-                ref={fileInputRef}
-                accept="video/mp4"
-                className="hiddenInput"
-                onChange={(event) => chooseVideo(event.target.files?.[0])}
-                type="file"
-              />
-            </label>
-          )}
+          </section> : null}
 
           <div className="videoFrameSettings">
             <h3>抽帧设置</h3>
@@ -394,59 +397,71 @@ export function VideoFrameRateWorkbench() {
             </label>
             <div className="videoFrameOutputSelect">输出：MP4 · 保留原声</div>
             <p>仅删除稀疏画面帧，播放速度与时长保持不变</p>
-            <button className="primaryButton videoFrameStartButton" disabled={!sourceFile || processingState === 'processing'} onClick={() => void startProcessing()} type="button">
-              {processingState === 'processing' ? '处理中…' : '开始处理'}
+            <button className="primaryButton videoFrameStartButton" disabled={!sourceFiles.length || isProcessing} onClick={() => void startProcessing()} type="button">
+              {isProcessing ? '批量处理中…' : '开始批量处理'}
             </button>
           </div>
+          <footer className="videoFrameSourceStatus">本次将处理 <b>{sourceFiles.length}</b> 个视频素材</footer>
         </section>
 
         <section className="workspaceCard videoFramePanel videoFrameOutputPanel videoFrameOutputCard" aria-labelledby="video-output-title">
           <header className="videoFramePanelHeader">
-            <h2 id="video-output-title">输出视频</h2>
-            {processingState === 'complete' && job?.downloadUrl ? (
-              <a className="videoFrameDownloadButton" download={job.outputName ?? '处理后视频.mp4'} href={job.downloadUrl}>下载视频</a>
-            ) : <button disabled type="button">下载视频</button>}
+            <h2 id="video-output-title">批量处理结果</h2>
+            <button className="videoFrameDownloadButton" disabled={!completeTasks.length} onClick={downloadAll} type="button">下载全部视频</button>
           </header>
           <div className="videoFramePreview videoFrameOutputPreview">
-            <video className="videoFramePlayer" controls src={outputUrl} />
-            {processingState !== 'complete' ? <span>处理完成后，新视频将在这里预览</span> : null}
+            <video className="videoFramePlayer" controls src={previewTask?.status === 'complete' ? previewTask.job?.previewUrl : undefined} />
+            {previewTask ? <span>{previewTask.file.name}<small>{previewTask.status === 'complete' ? selectedTaskKey && previewTaskKey === selectedTaskKey ? '左侧选中的处理结果，可直接预览' : '最近完成的视频，可直接预览' : '处理完成后可在这里预览输出视频'}</small></span> : <span>处理完成后，新视频将在这里预览</span>}
           </div>
 
           <section className="videoFrameProgress" aria-live="polite" aria-label="处理进度">
-            <div className="videoFrameProgressTitle"><strong>处理进度</strong><b>{progress}%</b></div>
+            <div className="videoFrameProgressTitle"><strong>整体处理进度</strong><b>{progress}%</b></div>
             <div className="videoFrameProgressTrack"><i style={{ width: `${progress}%` }} /></div>
             <p>{status}</p>
             <div className="videoFrameStages">
-              {['上传视频', '重新编码', '生成 MP4'].map((stage, index) => {
-                const active = progress >= [1, 5, 100][index];
+              {['上传素材', '重新编码', '生成 MP4'].map((stage, index) => {
+                const active = currentProgress >= [1, 5, 100][index];
                 return <span className={active ? 'active' : ''} key={stage}>{stage}</span>;
               })}
             </div>
           </section>
 
-          <section className="videoFrameOutputInfo" aria-label="输出信息">
-            <h3>输出信息</h3>
-            <dl>
-              <div><dt>输出时长</dt><dd>{processingState === 'complete' && job?.duration ? formatVideoDuration(job.duration) : '—'}</dd></div>
-              <div><dt>处理方式</dt><dd>{processingState === 'complete' ? settingLabel : '—'}</dd></div>
-              <div><dt>输出大小</dt><dd>{processingState === 'complete' && job?.outputSize ? formatFileSize(job.outputSize) : '—'}</dd></div>
-            </dl>
+          <section className="videoFrameTaskList" aria-label="处理任务">
+            <h3>处理任务</h3>
+            {tasks.length ? tasks.map((task) => <div className={`videoFrameTaskRow ${task.status}`} key={`${task.file.name}-${task.file.lastModified}-${task.file.size}`}>
+              <span><strong>{task.file.name}</strong><small>{settingLabel} · 原声保留</small></span>
+              <em><i />{task.status === 'queued' ? '等待处理' : task.status === 'processing' ? '处理中' : task.status === 'complete' ? '已完成' : '处理失败'}</em>
+              {task.status === 'complete' && task.job?.downloadUrl ? <a download={task.job.outputName || '处理后视频.mp4'} href={task.job.downloadUrl}>下载</a> : <b>{task.status === 'failed' ? task.error : `${task.job?.progress ?? 0}%`}</b>}
+            </div>) : <p className="videoFrameTaskEmpty">添加视频后，处理任务会显示在这里。</p>}
           </section>
-          <footer className="videoFrameStatus">{processingState === 'complete' ? '处理完成后可下载到本地' : processingError || `状态：${status}`}</footer>
+          <footer className="videoFrameStatus">状态：{status}</footer>
         </section>
       </section>
     </div>
   );
 }
 
+export function videoFrameTaskKey(file: Pick<File, 'name' | 'lastModified' | 'size'>) {
+  return `${file.name}-${file.lastModified}-${file.size}`;
+}
+
+export function resolveVideoFramePreviewTask(tasks: VideoFrameBatchTask[], selectedTaskKey: string) {
+  return tasks.find((task) => task.status === 'complete' && videoFrameTaskKey(task.file) === selectedTaskKey)
+    ?? [...tasks].reverse().find((task) => task.status === 'complete')
+    ?? tasks.find((task) => task.status === 'processing');
+}
+
+export function resolveVideoFrameQueueProgress(task?: VideoFrameBatchTask) {
+  if (!task) return { label: '0%', value: 0 };
+  if (task.status === 'complete') return { label: '100%', value: 100 };
+  if (task.status === 'failed') return { label: '失败', value: 100 };
+  const value = Math.max(0, Math.min(100, Math.round(task.job?.progress ?? 0)));
+  return { label: `${value}%`, value };
+}
+
 function formatFileSize(size: number) {
   if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
-}
-
-function formatVideoDuration(seconds: number) {
-  const totalSeconds = Math.max(0, Math.floor(seconds));
-  return [Math.floor(totalSeconds / 60), totalSeconds % 60].map((part) => String(part).padStart(2, '0')).join(':');
 }
 
 function navClass(active: boolean, base = 'navItem') {

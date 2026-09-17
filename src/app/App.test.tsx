@@ -1,8 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import * as AppModule from './App';
-import { App, VideoFrameRateWorkbench } from './App';
+import { App, resolveVideoFramePreviewTask, resolveVideoFrameQueueProgress, VideoFrameRateWorkbench } from './App';
 import { ShopList } from './pages/shops/ShopList';
+import type { VideoFrameBatchTask } from './videoFrameBatch';
 
 describe('应用侧边栏', () => {
   it('显示视频抽帧入口', () => {
@@ -30,9 +31,9 @@ describe('应用侧边栏', () => {
     expect(markup).toContain('间隔抽帧');
     expect(markup).not.toContain('目标帧率');
     expect(markup).toContain('开始处理');
-    expect(markup).toContain('输出视频');
-    expect(markup).toContain('处理进度');
-    expect(markup).toContain('下载视频');
+    expect(markup).toContain('批量处理结果');
+    expect(markup).toContain('整体处理进度');
+    expect(markup).toContain('下载全部视频');
     expect(markup).toContain('videoFramePage');
     expect(markup).not.toContain('videoFrameFileRow');
     expect(markup).not.toContain('videoFrameMetadata');
@@ -71,6 +72,36 @@ describe('应用侧边栏', () => {
     expect(markup).toContain('videoFrameSourceCard');
     expect(markup).toContain('videoFrameOutputCard');
     expect(markup).toContain('videoFramePreview');
+  });
+
+  it('renders a batch-video queue and batch result controls', () => {
+    const markup = renderToStaticMarkup(<VideoFrameRateWorkbench />);
+
+    expect(markup).toContain('批量上传 MP4 视频');
+    expect(markup).toContain('本次将处理');
+    expect(markup).toContain('开始批量处理');
+    expect(markup).toContain('批量处理结果');
+    expect(markup).toContain('下载全部视频');
+    expect(markup).toContain('multiple=""');
+  });
+
+  it('prefers the selected completed video when resolving the output preview', () => {
+    const firstFile = new File(['a'], 'first.mp4', { lastModified: 1 });
+    const secondFile = new File(['b'], 'second.mp4', { lastModified: 2 });
+    const tasks: VideoFrameBatchTask[] = [
+      { file: firstFile, job: { id: 'first', outputName: 'first-output.mp4', previewUrl: 'first-preview.mp4', progress: 100, settings: { mode: 'random', value: 1 }, status: 'complete' }, status: 'complete' },
+      { file: secondFile, job: { id: 'second', outputName: 'second-output.mp4', previewUrl: 'second-preview.mp4', progress: 100, settings: { mode: 'random', value: 1 }, status: 'complete' }, status: 'complete' }
+    ];
+
+    expect(resolveVideoFramePreviewTask(tasks, `${firstFile.name}-${firstFile.lastModified}-${firstFile.size}`)?.file.name).toBe('first.mp4');
+    expect(resolveVideoFramePreviewTask(tasks, '')?.file.name).toBe('second.mp4');
+  });
+
+  it('maps video queue task status to ring progress text', () => {
+    expect(resolveVideoFrameQueueProgress(undefined)).toEqual({ label: '0%', value: 0 });
+    expect(resolveVideoFrameQueueProgress({ file: new File(['a'], 'video.mp4'), job: { id: 'job', outputName: 'video.mp4', progress: 68, settings: { mode: 'random', value: 1 }, status: 'processing' }, status: 'processing' })).toEqual({ label: '68%', value: 68 });
+    expect(resolveVideoFrameQueueProgress({ file: new File(['a'], 'video.mp4'), status: 'complete' })).toEqual({ label: '100%', value: 100 });
+    expect(resolveVideoFrameQueueProgress({ file: new File(['a'], 'video.mp4'), status: 'failed' })).toEqual({ label: '失败', value: 100 });
   });
 
   it('uses a flat sidebar navigation instead of collapsible groups', () => {
