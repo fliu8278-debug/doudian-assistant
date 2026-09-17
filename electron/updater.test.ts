@@ -167,4 +167,45 @@ describe('startAutoUpdater', () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  it('lets the user cancel a download without showing an error', async () => {
+    const autoUpdater = createUpdater();
+    autoUpdater.downloadUpdate = vi.fn((token) => token.createPromise(() => {}));
+    const coordinator = startAutoUpdater({
+      app: { isPackaged: true, getVersion: () => '0.1.8' }, autoUpdater, log: { error: vi.fn() }
+    });
+    autoUpdater.emit('update-available', { version: '0.1.9' });
+
+    const downloading = coordinator.download();
+    await new Promise(setImmediate);
+    coordinator.cancelDownload();
+    await downloading;
+
+    expect(autoUpdater.downloadUpdate).toHaveBeenCalledOnce();
+    expect(coordinator.getState()).toMatchObject({ phase: 'available', version: '0.1.9', error: undefined });
+  });
+
+  it('skips a selected version on future checks', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'doudian-updater-test-'));
+    const settingsPath = join(directory, 'settings.json');
+    try {
+      const firstUpdater = createUpdater();
+      const first = startAutoUpdater({
+        app: { isPackaged: true, getVersion: () => '0.1.8' }, autoUpdater: firstUpdater, settingsPath, log: { error: vi.fn() }
+      });
+      firstUpdater.emit('update-available', { version: '0.1.9' });
+      first.skip();
+
+      const secondUpdater = createUpdater();
+      const second = startAutoUpdater({
+        app: { isPackaged: true, getVersion: () => '0.1.8' }, autoUpdater: secondUpdater, settingsPath, log: { error: vi.fn() }
+      });
+      secondUpdater.emit('update-available', { version: '0.1.9' });
+
+      expect(second.getState()).toMatchObject({ phase: 'not-available' });
+      expect(second.getState().version).toBeUndefined();
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
 });

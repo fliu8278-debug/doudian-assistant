@@ -199,7 +199,7 @@ export function App() {
           <CouponWorkbench currentShop={currentShop} shops={shops} />
         )}
       </main>
-      {showUpdateDialog ? <div className="updateDialogBackdrop" onMouseDown={() => setShowUpdateDialog(false)}><div onMouseDown={(event) => event.stopPropagation()}><UpdateDialog onCheck={() => void updater.check()} onClose={() => setShowUpdateDialog(false)} onDownload={() => void updater.download()} onOpenRelease={() => void updater.openRelease()} onRestart={() => void updater.restart()} state={updater.state} /></div></div> : null}
+      {showUpdateDialog ? <div className="updateDialogBackdrop" onMouseDown={() => setShowUpdateDialog(false)}><div onMouseDown={(event) => event.stopPropagation()}><UpdateDialog onCancelDownload={() => void updater.cancelDownload()} onCheck={() => void updater.check()} onClose={() => setShowUpdateDialog(false)} onDownload={() => void updater.download()} onOpenRelease={() => void updater.openRelease()} onRestart={() => void updater.restart()} onSkip={() => { void updater.skip(); setShowUpdateDialog(false); }} state={updater.state} /></div></div> : null}
       {updater.state.phase === 'ready' ? <div className="updateReadyToast"><span>新版本已下载完成</span><button onClick={() => void updater.restart()} type="button">重启更新</button></div> : null}
     </div>
   );

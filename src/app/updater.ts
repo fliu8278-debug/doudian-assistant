@@ -19,8 +19,10 @@ type UpdaterBridge = {
   getState(): Promise<UpdateState>;
   check(): Promise<UpdateState>;
   download(): Promise<UpdateState>;
+  cancelDownload(): Promise<UpdateState>;
   restart(): Promise<UpdateState>;
   setBackground(enabled: boolean): Promise<UpdateState>;
+  skip(): Promise<UpdateState>;
   openRelease(): Promise<void>;
   onState(listener: (state: UpdateState) => void): () => void;
 };
@@ -59,8 +61,10 @@ export function useUpdater() {
     state,
     check: () => bridge?.check(),
     download: () => bridge?.download(),
+    cancelDownload: () => bridge?.cancelDownload(),
     restart: () => bridge?.restart(),
     setBackground: (enabled: boolean) => bridge?.setBackground(enabled),
+    skip: () => bridge?.skip(),
     openRelease: () => bridge?.openRelease()
   };
 }

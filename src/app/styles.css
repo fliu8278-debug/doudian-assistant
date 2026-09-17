@@ -249,7 +249,7 @@ button:disabled {
 .updateDialog {
   display: flex;
   width: 100%;
-  min-height: 420px;
+  height: min(536px, calc(100dvh - 48px));
   max-height: 85dvh;
   flex-direction: column;
   border: 1px solid #dce5ef;
@@ -270,27 +270,32 @@ button:disabled {
 .updateDialogTitle { display: flex; align-items: center; gap: 12px; }
 .updateDialogIcon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: #1769e0; color: #fff; }
 .updateDialogIcon svg { width: 20px; height: 20px; color: #fff; }
-.updateDialog h2 { margin: 0; font-size: 20px; line-height: 1.2; }
-.updateDialogClose { width: 32px; height: 32px; border: 0; border-radius: 7px; background: transparent; color: #60738b; font-size: 25px; line-height: 1; }
+.updateDialog h2 { margin: 0; color: #172a44; font-size: 20px; font-weight: 800; line-height: 1.2; }
+.updateDialogClose { display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: #60738b; }
 .updateDialogClose:hover { background: #f1f5fa; color: #20364f; }
-.updateDialogBody { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 8px; padding: 28px; overflow: auto; }
+.updateDialogBody { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 10px; padding: 27px 28px; overflow: hidden; }
 .updateDialogVersion { color: #1769e0; font-size: 14px; font-weight: 800; }
 .updateDialogSummary { margin: 0; color: #5e7088; font-size: 14px; line-height: 1.6; }
-.updateReadyNotice { margin: 4px 0; border-radius: 8px; background: #e9f8ef; padding: 10px 12px; color: #16824c; font-size: 13px; }
-.updateDialogRule { height: 1px; margin: 4px 0 0; background: #e6ecf3; }
-.updateDialog h3 { margin: 0; color: #2d3e53; font-size: 13px; }
-.updateDialogNotes { max-height: 200px; overflow: auto; padding-right: 8px; color: #5d6e84; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+.updateReadyNotice { display: flex; align-items: center; gap: 7px; margin: 4px 0; border-radius: 8px; background: #e6f8ee; padding: 11px 13px; color: #159447; font-size: 13px; }
+.updateDialogRule { height: 1px; margin: 8px 0 0; background: #e6ecf3; }
+.updateDialog h3 { margin: 0; color: #2d3e53; font-size: 13px; font-weight: 800; }
+.updateDialogNotes { min-height: 0; flex: 1; overflow: auto; padding-right: 13px; color: #526780; font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
 .updateError { margin: 4px 0; color: #b54747; font-size: 13px; line-height: 1.6; }
-.updateProgress { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
+.updateProgress { display: flex; flex-direction: column; gap: 9px; margin: 6px 0; }
 .updateProgressRow { display: flex; align-items: center; gap: 8px; }
 .updateProgressTrack { height: 6px; flex: 1; overflow: hidden; border-radius: 3px; background: #eaf0f7; }
-.updateProgressTrack i { display: block; height: 100%; border-radius: inherit; background: #1769e0; }
+.updateProgressTrack i { display: block; height: 100%; border-radius: inherit; background: #119eb4; }
 .updateProgressText { color: #8190a2; font-size: 12px; text-align: center; }
-.updateDialogFooter { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 19px 28px; border-top: 1px solid #dae4ef; background: #f3f7fc; }
-.updateDialogSecondary, .updateDialogPrimary { height: 40px; border-radius: 10px; padding: 0 17px; font-weight: 700; }
-.updateDialogSecondary { border: 1px solid #d6e0ec; background: #fff; color: #3b5674; }
+.updateProgressCancel { display: grid; width: 20px; height: 20px; place-items: center; border: 0; border-radius: 50%; background: transparent; color: #8ca0b7; }
+.updateDialogFooter { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 20px 28px; border-top: 1px solid #dae4ef; background: #f3f7fc; }
+.updateDialogSecondary, .updateDialogTertiary, .updateDialogPrimary { height: 42px; border-radius: 11px; padding: 0 17px; font-weight: 700; }
+.updateDialogSecondary { border: 1px solid #d6e0ec; background: #fff; color: #3b5674; box-shadow: 0 2px 6px rgba(24, 50, 78, 0.08); }
+.updateDialogTertiary { border: 1px solid #d5dfeb; background: #f5f8fc; color: #34618d; }
 .updateDialogPrimary { border: 1px solid #1769e0; background: #1769e0; color: #fff; box-shadow: 0 8px 16px rgba(23, 105, 224, 0.22); }
 .updateDialogPrimary:disabled { border-color: #83b0e8; background: #83b0e8; box-shadow: none; }
+.updateButtonIcon { width: 16px; height: 16px; flex: 0 0 auto; }
+.updateDialogPrimary { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.updateDialogClose .updateButtonIcon, .updateProgressCancel .updateButtonIcon { width: 16px; height: 16px; }
 
 .videoFrameModePicker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
 .videoFrameModePicker button { min-height: 42px; border: 1px solid #d4e0ee; border-radius: 8px; background: #fff; color: #617890; font-weight: 700; }

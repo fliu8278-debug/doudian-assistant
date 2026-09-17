@@ -1,5 +1,6 @@
 const { existsSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
 const { dirname } = require('node:path');
+const { CancellationToken } = require('builder-util-runtime');
 
 const DEFAULT_RELEASE_URL = 'https://github.com/fliu8278-debug/doudian-assistant/releases/latest';
 
@@ -13,6 +14,7 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
     backgroundEnabled: settings.backgroundEnabled,
     ...(justUpdated ? { justUpdated: true, releaseNotes: plainReleaseNotes(settings.pendingReleaseNotes), version: currentVersion } : {})
   };
+  let downloadToken;
   const publish = (next) => {
     state = { ...state, ...next };
     broadcast(state);
@@ -33,14 +35,27 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
   };
   const download = async () => {
     if (!app.isPackaged || state.phase !== 'available') return state;
+    downloadToken = new CancellationToken();
     publish({ phase: 'downloading', error: undefined, percent: 0 });
     try {
-      await autoUpdater.downloadUpdate();
+      await autoUpdater.downloadUpdate(downloadToken);
     } catch (error) {
+      if (downloadToken.cancelled) {
+        publish({ phase: 'available', error: undefined, percent: undefined });
+        return state;
+      }
       log.error('更新下载失败', error);
       publish({ phase: 'error', error: '下载更新失败，请稍后重试。' });
+    } finally {
+      downloadToken = undefined;
     }
     return state;
+  };
+  const cancelDownload = () => downloadToken?.cancel();
+  const skip = () => {
+    if (!state.version) return state;
+    saveSettings(settingsPath, { ...settings, backgroundEnabled: state.backgroundEnabled, skippedVersion: state.version });
+    return publish({ phase: 'not-available', version: undefined, releaseNotes: undefined, error: undefined });
   };
   const restart = () => {
     if (state.phase === 'ready') autoUpdater.quitAndInstall();
@@ -54,7 +69,7 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
     if (openExternal) await openExternal(state.releaseUrl ?? releaseUrl);
   };
 
-  if (!app.isPackaged) return { check, download, getState: () => state, openRelease, restart, setBackground };
+  if (!app.isPackaged) return { cancelDownload, check, download, getState: () => state, openRelease, restart, setBackground, skip };
 
   saveSettings(settingsPath, {
     ...settings,
@@ -65,6 +80,10 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
   autoUpdater.autoDownload = false;
   autoUpdater.on('checking-for-update', () => publish({ phase: 'checking', error: undefined }));
   autoUpdater.on('update-available', (info) => {
+    if (settings.skippedVersion === info.version) {
+      publish({ phase: 'not-available', error: undefined });
+      return;
+    }
     publish({
       phase: 'available',
       version: info.version,
@@ -98,18 +117,20 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
   });
   void check();
 
-  return { check, download, getState: () => state, openRelease, restart, setBackground };
+  return { cancelDownload, check, download, getState: () => state, openRelease, restart, setBackground, skip };
 }
 
 function registerAutoUpdaterIpc({ ipcMain, coordinator }) {
   ipcMain.handle('updater:get-state', () => coordinator.getState());
   ipcMain.handle('updater:check', () => coordinator.check());
   ipcMain.handle('updater:download', () => coordinator.download());
+  ipcMain.handle('updater:cancel-download', () => coordinator.cancelDownload());
   ipcMain.handle('updater:restart', () => {
     coordinator.restart();
     return coordinator.getState();
   });
   ipcMain.handle('updater:set-background', (_event, enabled) => coordinator.setBackground(enabled));
+  ipcMain.handle('updater:skip', () => coordinator.skip());
   ipcMain.handle('updater:open-release', () => coordinator.openRelease());
 }
 
@@ -137,7 +158,8 @@ function readSettings(settingsPath) {
       backgroundEnabled: Boolean(stored.backgroundEnabled),
       lastRunVersion: stored.lastRunVersion,
       pendingReleaseNotes: stored.pendingReleaseNotes,
-      pendingVersion: stored.pendingVersion
+      pendingVersion: stored.pendingVersion,
+      skippedVersion: stored.skippedVersion
     };
   } catch {
     return { backgroundEnabled: false };
