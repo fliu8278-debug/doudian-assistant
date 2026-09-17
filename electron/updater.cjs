@@ -25,7 +25,9 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
       await autoUpdater.checkForUpdates();
     } catch (error) {
       log.error('更新检查失败', error);
-      publish({ phase: 'error', error: '检查更新失败，请稍后重试。' });
+      publish(justUpdated
+        ? { phase: 'idle', error: undefined }
+        : { phase: 'error', error: '检查更新失败，请稍后重试。' });
     }
     return state;
   };

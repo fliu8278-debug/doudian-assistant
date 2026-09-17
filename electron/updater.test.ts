@@ -147,4 +147,24 @@ describe('startAutoUpdater', () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  it('keeps the upgrade-success state when the automatic post-restart check fails', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'doudian-updater-test-'));
+    const settingsPath = join(directory, 'settings.json');
+    writeFileSync(settingsPath, JSON.stringify({ pendingVersion: '0.1.2' }));
+    const autoUpdater = createUpdater();
+    autoUpdater.checkForUpdates.mockRejectedValue(new Error('update feed unavailable'));
+    try {
+      const coordinator = startAutoUpdater({
+        app: { isPackaged: true, getVersion: () => '0.1.2' }, autoUpdater, settingsPath, log: { error: vi.fn() }
+      });
+
+      await new Promise(setImmediate);
+
+      expect(coordinator.getState()).toMatchObject({ phase: 'idle', justUpdated: true });
+      expect(coordinator.getState()).toMatchObject({ error: undefined });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
 });
