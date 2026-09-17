@@ -2,6 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const net = require('node:net');
 const path = require('node:path');
+const { bundledBrowserPath } = require('./browser.cjs');
 const { registerAutoUpdaterIpc, startAutoUpdater } = require('./updater.cjs');
 
 let mainWindow;
@@ -45,6 +46,7 @@ async function startApp() {
   process.env.DOUDIAN_FFPROBE_PATH ||= app.isPackaged
     ? path.join(process.resourcesPath, 'ffmpeg', 'win32-x64', 'ffprobe.exe')
     : path.join(process.cwd(), 'vendor', 'ffmpeg', 'win32-x64', 'ffprobe.exe');
+  if (app.isPackaged) process.env.DOUDIAN_BROWSER_EXECUTABLE ||= bundledBrowserPath(process.resourcesPath);
   const staticDir = path.join(__dirname, '..', 'dist');
   const port = await findAvailablePort(4173);
   const { startServer } = require(path.join(__dirname, '..', 'build', 'server', 'index.cjs'));

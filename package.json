@@ -1,6 +1,6 @@
 {
   "name": "doudian-tool",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": true,
   "type": "module",
   "repository": {
@@ -21,8 +21,9 @@
     "build": "npm run typecheck && vite build && npm run build:server",
     "prepare:ffmpeg": "node scripts/download-ffmpeg.mjs",
     "app": "npm run build && electron .",
-    "dist:win": "npm run prepare:ffmpeg && npm run build && electron-builder --win nsis --x64 --publish never",
-    "release:win": "npm run prepare:ffmpeg && npm run build && electron-builder --win nsis --x64 --publish always"
+    "prepare:browser": "node scripts/download-browser.mjs",
+    "dist:win": "npm run prepare:ffmpeg && npm run prepare:browser && npm run build && electron-builder --win nsis --x64 --publish never",
+    "release:win": "npm run prepare:ffmpeg && npm run prepare:browser && npm run build && electron-builder --win nsis --x64 --publish always"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.2",
@@ -67,6 +68,10 @@
       {
         "from": "vendor/ffmpeg/win32-x64",
         "to": "ffmpeg/win32-x64"
+      },
+      {
+        "from": "vendor/playwright/chromium",
+        "to": "playwright/chromium"
       }
     ],
     "asar": true,

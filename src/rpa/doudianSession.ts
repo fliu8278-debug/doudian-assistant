@@ -89,6 +89,7 @@ async function getOrStartContext(binding: ContextBinding) {
 
   const promise = chromium.launchPersistentContext(binding.profilePath, {
     headless: binding.headless,
+    executablePath: process.env.DOUDIAN_BROWSER_EXECUTABLE,
     viewport: { width: 1360, height: 860 },
     args: ['--no-proxy-server']
   }).then(async (context) => {

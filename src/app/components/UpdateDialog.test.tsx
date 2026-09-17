@@ -112,6 +112,21 @@ describe('UpdateDialog', () => {
     expect(markup).not.toContain('✓ 我知道了');
   });
 
+  it('reserves “我知道了” for the successful update view', () => {
+    for (const state of [
+      { phase: 'available' as const, currentVersion: '0.1.9', version: '0.1.10' },
+      { phase: 'downloading' as const, currentVersion: '0.1.9', version: '0.1.10' },
+      { phase: 'ready' as const, currentVersion: '0.1.9', version: '0.1.10' }
+    ]) {
+      const markup = renderToStaticMarkup(<UpdateDialog
+        onCheck={vi.fn()} onDownload={vi.fn()} onOpenRelease={vi.fn()} onRestart={vi.fn()}
+        state={state}
+      />);
+
+      expect(markup).not.toContain('我知道了');
+    }
+  });
+
   it('offers the release page when updating fails', () => {
     const markup = renderToStaticMarkup(<UpdateDialog
       onCheck={vi.fn()}

@@ -81,6 +81,11 @@ describe('startAutoUpdater', () => {
 
     expect(packageJson.build.publish[0]).toMatchObject({ provider: 'github', repo: 'doudian-assistant' });
     expect(packageJson.build.win.verifyUpdateCodeSignature).toBe(false);
+    expect(packageJson.scripts['prepare:browser']).toBe('node scripts/download-browser.mjs');
+    expect(packageJson.build.extraResources).toContainEqual({
+      from: 'vendor/playwright/chromium',
+      to: 'playwright/chromium'
+    });
   });
 
   it('converts GitHub HTML release notes to readable text', () => {
