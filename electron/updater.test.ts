@@ -76,10 +76,10 @@ describe('startAutoUpdater', () => {
     expect(getState()).toMatchObject({ phase: 'idle', currentVersion: '0.1.1' });
   });
 
-  it('publishes updater assets from the public release repository', () => {
+  it('publishes updater assets to the main project release page', () => {
     const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 
-    expect(packageJson.build.publish[0]).toMatchObject({ provider: 'github', repo: 'doudian-assistant-releases' });
+    expect(packageJson.build.publish[0]).toMatchObject({ provider: 'github', repo: 'doudian-assistant' });
     expect(packageJson.build.win.verifyUpdateCodeSignature).toBe(false);
   });
 
@@ -117,7 +117,7 @@ describe('startAutoUpdater', () => {
 
       expect(restored.getState()).toMatchObject({ backgroundEnabled: true });
       expect(autoUpdater.downloadUpdate).toHaveBeenCalledOnce();
-      expect(openExternal).toHaveBeenCalledWith('https://github.com/fliu8278-debug/doudian-assistant-releases/releases/latest');
+      expect(openExternal).toHaveBeenCalledWith('https://github.com/fliu8278-debug/doudian-assistant/releases/latest');
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }

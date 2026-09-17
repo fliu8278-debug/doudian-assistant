@@ -6,13 +6,13 @@ on:
       - 'v*'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   release:
     runs-on: windows-latest
     env:
-      GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,10 +25,6 @@ jobs:
       - name: Verify release configuration
         shell: pwsh
         run: |
-          $missing = 'GH_TOKEN' | Where-Object {
-            [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_))
-          }
-          if ($missing) { throw "Missing required release secrets: $($missing -join ', ')" }
           $tagVersion = $env:GITHUB_REF_NAME.Substring(1)
           $packageVersion = node -p "require('./package.json').version"
           if ($tagVersion -ne $packageVersion) {
@@ -44,8 +40,8 @@ jobs:
           $end = $start + 1
           while ($end -lt $lines.Count -and $lines[$end] -notmatch '^## ') { $end++ }
           $lines[($start + 1)..($end - 1)] | Set-Content release-notes.md
-          gh release create "$env:GITHUB_REF_NAME" --repo fliu8278-debug/doudian-assistant-releases --draft --title "抖店助手 $env:GITHUB_REF_NAME" --notes-file release-notes.md
+          gh release create "$env:GITHUB_REF_NAME" --repo "$env:GITHUB_REPOSITORY" --draft --title "抖店助手 $env:GITHUB_REF_NAME" --notes-file release-notes.md
       - run: npm run release:win
       - name: Publish completed release
         shell: pwsh
-        run: gh release edit "$env:GITHUB_REF_NAME" --repo fliu8278-debug/doudian-assistant-releases --draft=false --latest
+        run: gh release edit "$env:GITHUB_REF_NAME" --repo "$env:GITHUB_REPOSITORY" --draft=false --latest

@@ -1,7 +1,7 @@
 const { existsSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
 const { dirname } = require('node:path');
 
-const DEFAULT_RELEASE_URL = 'https://github.com/fliu8278-debug/doudian-assistant-releases/releases/latest';
+const DEFAULT_RELEASE_URL = 'https://github.com/fliu8278-debug/doudian-assistant/releases/latest';
 
 function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = console, openExternal, releaseUrl = DEFAULT_RELEASE_URL, settingsPath }) {
   const settings = readSettings(settingsPath);
