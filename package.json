@@ -1,6 +1,6 @@
 {
   "name": "doudian-tool",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "type": "module",
   "repository": {
@@ -75,7 +75,7 @@
         "provider": "github",
         "owner": "fliu8278-debug",
         "repo": "doudian-assistant",
-        "releaseType": "draft"
+        "releaseType": "release"
       }
     ],
     "win": {
