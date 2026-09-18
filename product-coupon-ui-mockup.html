@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>商品券 · 原型</title>
+  <style>
+    :root { --ink:#173c70; --body:#406089; --muted:#6f86a2; --line:#d7e3f0; --field:#fbfdff; --blue:#1769e0; --panel:#fff; --good:#176b4a; --good-bg:#eef8f2; }
+    * { box-sizing:border-box; }
+    body { min-width:960px; margin:0; background:linear-gradient(115deg,#f4f8fc 0%,#f7fbfc 67%,#e8fbf6 100%); color:var(--body); font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif; font-size:14px; -webkit-font-smoothing:antialiased; }
+    button,input,select { font:inherit; }
+    button { cursor:pointer; }
+    .page { padding:24px 28px; }
+    .breadcrumb { margin:0 0 8px; color:#6680a0; font-size:13px; }
+    .breadcrumb b { color:#315988; font-weight:700; }
+    .titlebar { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:16px; }
+    h1,h2,p { margin:0; }
+    h1 { color:#153c70; font-size:24px; letter-spacing:-.4px; }
+    .titlebar p { margin-top:5px; color:#6681a0; }
+    .top-actions,.button-row { display:flex; gap:10px; align-items:center; }
+    .button { height:34px; border:1px solid #cbd9e9; border-radius:8px; background:#fff; color:#315988; padding:0 15px; font-weight:600; box-shadow:0 1px 2px rgba(24,62,101,.03); }
+    .button:hover { border-color:#91b5e9; background:#f7fbff; }
+    .button:active { transform:scale(.98); }
+    .button.primary { border-color:#6f9ee6; background:#80a9e9; color:#fff; }
+    .button.primary:hover { background:#6396e4; }
+    .settings { display:grid; gap:12px; margin-bottom:16px; min-height:128px; padding:14px 16px; border:1px solid var(--line); border-radius:14px; background:var(--panel); box-shadow:0 14px 36px rgba(73,91,112,.08); }
+    .settings-head { display:flex; align-items:center; justify-content:space-between; }
+    h2 { color:#153c70; font-size:16px; line-height:1.2; }
+    .ready { display:inline-flex; align-items:center; min-height:24px; border:1px solid #bedbc8; border-radius:999px; background:var(--good-bg); color:var(--good); padding:0 10px; font-size:12px; font-weight:700; }
+    .fields { display:grid; grid-template-columns:minmax(230px,1.3fr) minmax(210px,1fr) minmax(210px,1fr) minmax(110px,.45fr); gap:12px; }
+    label { display:grid; gap:6px; color:#284f80; font-size:13px; font-weight:700; }
+    input,select { width:100%; height:38px; border:1px solid #cdd8e7; border-radius:8px; background:var(--field); color:#24476f; padding:0 10px; outline:none; font-size:13px; }
+    input:focus,select:focus { border-color:#83afea; box-shadow:0 0 0 2px #e9f2ff; }
+    .concurrency input { text-align:center; }
+    .summary { color:#3b6494; font-size:13px; font-variant-numeric:tabular-nums; }
+    .grid { display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:16px; align-items:start; }
+    .panel { border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.94); box-shadow:0 14px 36px rgba(73,91,112,.07); }
+    .table-panel { min-height:575px; padding:18px 20px; }
+    .panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; padding-bottom:14px; border-bottom:1px solid #d9e4ef; }
+    .panel-head p { margin-top:4px; color:#58779d; font-size:13px; }
+    .empty { min-height:445px; display:grid; place-content:center; justify-items:center; gap:8px; color:#55739a; text-align:center; }
+    .empty strong { color:#153c70; font-size:16px; }
+    .empty span { font-size:14px; }
+    .run { min-height:575px; padding:18px; }
+    .run-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .state { display:inline-flex; align-items:center; gap:6px; min-height:26px; border:1px solid #d3dfea; border-radius:999px; background:#f7faff; color:#6480a0; padding:0 10px; font-size:12px; font-weight:700; }
+    .state::before { content:""; width:7px; height:7px; border-radius:50%; background:#9cadc2; }
+    .focus,.log { margin-top:16px; border:1px solid #d8e4ef; border-radius:14px; background:#fbfdff; padding:15px; }
+    .focus span,.progress-label { color:#54749a; font-size:13px; }
+    .focus strong { display:block; margin-top:8px; color:#153c70; font-size:24px; line-height:1; font-variant-numeric:tabular-nums; }
+    .focus p { margin-top:14px; color:#5a789c; line-height:1.5; }
+    .progress { margin-top:16px; }
+    .progress-meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .progress-meta b { color:#0b63da; font-size:13px; }
+    .track { height:8px; overflow:hidden; border-radius:999px; background:#e9f0f7; }
+    .track i { display:block; width:0; height:100%; background:#1769e0; }
+    .stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:16px; }
+    .stats span { display:grid; gap:5px; min-height:54px; border:1px solid #d8e4ef; border-radius:10px; background:#fbfdff; padding:9px 11px; color:#55749a; font-size:13px; }
+    .stats b { color:#143e71; font-size:17px; font-variant-numeric:tabular-nums; }
+    .log { min-height:106px; }
+    .log strong { color:#153c70; font-size:14px; }
+    .log p { margin-top:12px; color:#6280a3; }
+    .toast { position:fixed; right:28px; bottom:24px; transform:translateY(12px); opacity:0; pointer-events:none; border:1px solid #bedbc8; border-radius:8px; background:#effaf3; color:#176b4a; padding:10px 14px; box-shadow:0 12px 28px rgba(41,94,68,.14); transition:opacity .18s ease,transform .18s ease; }
+    .toast.show { transform:translateY(0); opacity:1; }
+    @media (max-width:1100px) { .page { padding:20px; } .grid { grid-template-columns:minmax(0,1fr) 264px; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="breadcrumb">营销 / <b>商品券</b></div>
+    <header class="titlebar">
+      <div><h1>商品券</h1><p>先设置活动时间，再导入款号、优惠券名称和满减金额。</p></div>
+      <div class="top-actions"><button class="button" id="download" type="button">下载模板</button><button class="button primary" id="import" type="button">导入表格</button></div>
+    </header>
+    <section class="settings" aria-labelledby="settings-title">
+      <div class="settings-head"><h2 id="settings-title">批次设置</h2><span class="ready">已就绪</span></div>
+      <div class="fields">
+        <label>执行店铺<select aria-label="执行店铺"><option>斯凯彻斯</option><option>店铺二号</option></select></label>
+        <label>活动开始时间<input aria-label="活动开始时间" type="text" value="2026-09-18 10:30:00" /></label>
+        <label>活动结束时间<input aria-label="活动结束时间" type="text" value="2026-09-25 12:55:00" /></label>
+        <label class="concurrency">并发窗口<input aria-label="并发窗口" type="number" min="1" max="5" value="1" /></label>
+      </div>
+      <div class="summary">2026-09-18 10:30:00 至 2026-09-25 12:55:00</div>
+    </section>
+    <section class="grid">
+      <section class="panel table-panel" aria-labelledby="preview-title">
+        <div class="panel-head">
+          <div><h2 id="preview-title">表格预览</h2><p>下载模板后填写款号、优惠券名称和满减金额，再导入识别</p></div>
+          <div class="button-row"><button class="button" id="check" type="button">检查数据</button><button class="button primary" id="submit" type="button">提交商品券任务</button></div>
+        </div>
+        <div class="empty"><strong>还没有导入表格</strong><span>模板只需要填：款号、优惠券名称、满减金额。</span></div>
+      </section>
+      <aside class="panel run" aria-labelledby="run-title">
+        <div class="run-head"><h2 id="run-title">当前执行</h2><span class="state">未开始</span></div>
+        <div class="focus"><span>当前款号</span><strong>--</strong><p>导入模板后，可以在这里看当前处理的款号。</p></div>
+        <div class="progress"><div class="progress-meta"><span class="progress-label">整体进度</span><b>0%</b></div><div class="track"><i></i></div></div>
+        <div class="stats"><span>已导入<b>0</b></span><span>可提交<b>0</b></span><span>错误<b>0</b></span></div>
+        <div class="log"><strong>执行记录</strong><p>暂无执行记录</p></div>
+      </aside>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status"></div>
+  <script>
+    const toast = document.getElementById('toast');
+    function note(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1600); }
+    document.getElementById('download').onclick = () => note('模板字段：款号、优惠券名称、满减金额');
+    document.getElementById('import').onclick = () => note('原型演示：正式软件将识别导入表格');
+    document.getElementById('check').onclick = () => note('请先导入商品券表格');
+    document.getElementById('submit').onclick = () => note('请先导入并检查商品券表格');
+  </script>
+</body>
+</html>

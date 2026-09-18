@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as AppModule from './App';
-import { App, resolveVideoFramePreviewTask, resolveVideoFrameQueueProgress, VideoFrameRateWorkbench } from './App';
-import { ShopList } from './pages/shops/ShopList';
+import { App, CouponWorkbench, ProductCouponWorkbench, resolveVideoFramePreviewTask, resolveVideoFrameQueueProgress, VideoFrameRateWorkbench } from './App';
+import { scheduleShopToastDismissal, ShopList } from './pages/shops/ShopList';
 import type { VideoFrameBatchTask } from './videoFrameBatch';
 
 describe('应用侧边栏', () => {
@@ -125,5 +125,52 @@ describe('应用侧边栏', () => {
 
     expect(markup).toContain('shopDashboardGrid');
     expect(markup).toContain('shopQuickTools');
+  });
+
+  it('offers a delete action for each shop row', () => {
+    const markup = renderToStaticMarkup(
+      <ShopList loading={false} onChanged={async () => undefined} refreshedAt={null} refreshing={false} shops={[{
+        id: 'shop-1', name: '多余店铺', remark: '', platform: 'doudian', officialAccountName: '测试账号', status: 'need_login', current: false,
+        lastLoginAt: null, lastSyncedAt: null, snapshot: {}, createdAt: '2026-09-17T00:00:00.000Z'
+      }]} />
+    );
+
+    expect(markup).toContain('删除店铺');
+  });
+
+  it('dismisses shop messages after five seconds', () => {
+    const dismiss = vi.fn();
+    const setTimer = vi.fn((callback: () => void, delay: number) => {
+      callback();
+      return 1;
+    });
+
+    scheduleShopToastDismissal(dismiss, setTimer);
+
+    expect(setTimer).toHaveBeenCalledWith(dismiss, 5_000);
+    expect(dismiss).toHaveBeenCalledOnce();
+  });
+
+  it('keeps three separate coupon entries and gives product coupons their own batch form', () => {
+    const appMarkup = renderToStaticMarkup(<App />);
+    expect(appMarkup).toContain('新人礼金');
+    expect(appMarkup).toContain('商品优惠券');
+    expect(appMarkup).toContain('涨粉券');
+
+    const markup = renderToStaticMarkup(<CouponWorkbench currentShop={undefined} shops={[]} />);
+
+    expect(markup).toContain('涨粉券建立');
+    expect(markup).not.toContain('商品优惠券建立');
+
+    const productMarkup = renderToStaticMarkup(<ProductCouponWorkbench currentShop={undefined} shops={[]} />);
+    expect(productMarkup).toContain('商品优惠券建立');
+    expect(productMarkup).toContain('优惠券名称（可选）');
+    expect(productMarkup).toContain('领取结束时间');
+  });
+
+  it('keeps fan coupon and product coupon labels separate', () => {
+    const markup = renderToStaticMarkup(<CouponWorkbench currentShop={undefined} shops={[]} />);
+    expect(markup).toContain('涨粉券建立');
+    expect(markup).not.toContain('商品优惠券');
   });
 });

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>视频抽帧批量处理演示</title>
+  <style>
+    :root { --blue:#1769e0; --green:#168d4c; --red:#b73535; --ink:#233851; --muted:#6b7a90; --line:#d8e4f1; --soft:#f4f7fb; --panel:#fff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #eef3f8; color: var(--ink); font: 14px/1.45 "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif; }
+    button { font: inherit; }
+    .page { min-width: 1180px; padding: 22px; }
+    .card { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+    .page-head { margin: 0 0 14px; }
+    .page-head h1 { margin: 0 0 4px; font-size: 24px; line-height: 1.2; }
+    .page-head p { margin: 0; color: var(--muted); }
+    .app { display: grid; grid-template-columns: 390px minmax(0, 1fr); gap: 14px; min-height: calc(100vh - 92px); }
+    .panel { display: flex; min-height: 0; flex-direction: column; gap: 11px; padding: 14px; }
+    .panel h2, .panel h3 { margin: 0; }
+    .panel h2 { font-size: 18px; }
+    .panel h3 { font-size: 15px; }
+    .upload { display: grid; place-items: center; align-content: center; gap: 5px; min-height: 135px; border: 1px dashed #9dc3f8; border-radius: 10px; background: #f8fbff; text-align: center; }
+    .upload strong { font-size: 16px; }
+    .upload span { color: var(--muted); }
+    .upload button { height: 32px; margin-top: 5px; padding: 0 14px; border: 1px solid #bdd4ef; border-radius: 7px; background: #fff; color: var(--blue); font-weight: 700; cursor: pointer; }
+    .queue { overflow: hidden; border: 1px solid #e1eaf4; border-radius: 9px; }
+    .queue header { display: flex; align-items: center; justify-content: space-between; padding: 9px 10px; background: #f7faff; color: #526980; font-weight: 700; }
+    .queue header span { color: #7d8fa4; font-weight: 400; }
+    .queue-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 56px; padding: 7px 9px; border-top: 1px solid #edf2f7; }
+    .queue-row:first-of-type { border-top: 0; }
+    .queue-row.selected { background: #f2f8ff; box-shadow: inset 3px 0 0 var(--blue); }
+    .queue-button { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; }
+    .queue-button:not(:disabled) { cursor: pointer; }
+    .queue-button:disabled { cursor: default; }
+    .thumb { width: 42px; height: 30px; border-radius: 5px; background: linear-gradient(135deg, #314f67 0 36%, #91bede 36% 64%, #406b8a 64%); }
+    .thumb.b { background: linear-gradient(135deg, #7b5a55 0 37%, #d5a17f 37% 65%, #506f80 65%); }
+    .thumb.c { background: linear-gradient(135deg, #3b5d6c 0 37%, #5e9b9f 37% 64%, #d6c379 64%); }
+    .thumb.d { background: linear-gradient(135deg, #363d58 0 37%, #8b90be 37% 64%, #ddb26c 64%); }
+    .name { min-width: 0; }
+    .name strong, .name small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .name strong { color: #354a63; font-size: 13px; }
+    .name small { color: #8391a3; font-size: 12px; }
+    .queue-progress { display: grid; justify-items: center; gap: 3px; min-width: 46px; color: #4f82c6; font-size: 11px; font-weight: 800; line-height: 1; }
+    .status-ring { width: 25px; height: 25px; border-radius: 50%; background: conic-gradient(var(--ring, #9dc8ff) var(--value, 0%), #eaf3ff 0); position: relative; }
+    .status-ring::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #fff; }
+    .processing .status-ring { background: conic-gradient(#9dc8ff 0 28%, #eaf3ff 28% 100%); animation: spin 950ms linear infinite; }
+    .complete .queue-progress { color: #4f9f72; }
+    .complete .status-ring { --ring: #9eddb8; }
+    .failed .queue-progress { color: #d97878; }
+    .failed .status-ring { --ring: #f0a3a3; background-color: #fff0f0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .remove { width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: #8c9daf; cursor: pointer; }
+    .settings { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid #dce7f2; }
+    .mode { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mode button { min-height: 38px; border: 1px solid #d4e0ee; border-radius: 8px; background: #fff; color: #617890; font-weight: 700; }
+    .mode .active { border-color: var(--blue); background: #f1f7ff; color: var(--blue); }
+    .frame-field { display: flex; align-items: center; gap: 10px; color: #52657d; }
+    .frame-field span { min-width: 82px; }
+    .frame-field input { width: 96px; height: 34px; padding: 0 10px; border: 1px solid #bdd4ef; border-radius: 7px; color: var(--ink); font-weight: 700; }
+    .frame-field b { color: #52657d; font-size: 13px; }
+    .primary { height: 40px; border: 1px solid var(--blue); border-radius: 8px; background: var(--blue); color: #fff; font-weight: 800; }
+    .source-foot, .status { margin-top: auto; padding: 9px 10px; border-radius: 7px; background: var(--soft); color: var(--muted); }
+    .source-foot b { color: var(--blue); }
+    .result-head, .progress-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .download-all { height: 36px; min-width: 112px; border: 1px solid #bcd4ef; border-radius: 8px; background: #fff; color: var(--blue); font-weight: 700; }
+    .preview { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 9px; background: #161d27; }
+    .preview::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 28% 30%, rgba(100,160,210,.35), transparent 28%), linear-gradient(135deg, #101a25, #29394b 45%, #0e1620); opacity: .95; }
+    .preview.done::before { background: linear-gradient(135deg, rgba(20,30,42,.55), rgba(20,30,42,.2)), linear-gradient(135deg, #385d75 0 34%, #d0a77c 34% 62%, #5f7e91 62%); }
+    .preview-text { position: relative; max-width: 78%; color: #e7eef7; text-align: center; }
+    .preview-text strong, .preview-text span { display: block; }
+    .preview-text span { margin-top: 6px; color: #acb9c8; font-size: 13px; }
+    .badge { position: absolute; z-index: 1; top: 10px; left: 10px; padding: 4px 8px; border-radius: 5px; background: rgba(20,32,45,.75); color: #fff; font-size: 12px; }
+    .play { position: absolute; z-index: 1; top: 50%; left: 50%; display: none; width: 52px; height: 52px; border: 1px solid rgba(255,255,255,.6); border-radius: 50%; background: rgba(14,24,36,.56); place-items: center; transform: translate(-50%, -50%); }
+    .play::before { content: ""; width: 0; height: 0; margin-left: 4px; border-top: 11px solid transparent; border-bottom: 11px solid transparent; border-left: 17px solid #fff; }
+    .preview.done .play { display: grid; }
+    .progress { display: grid; gap: 7px; }
+    .progress-head strong, .progress-head b { font-size: 15px; }
+    .progress-head b { color: var(--blue); }
+    .track { height: 8px; overflow: hidden; border-radius: 999px; background: #e6edf5; }
+    .track i { display: block; width: 38%; height: 100%; border-radius: inherit; background: var(--blue); }
+    .progress p { margin: 0; color: var(--muted); }
+    .stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .stages span { display: grid; min-height: 32px; place-items: center; border-radius: 7px; background: #f1f5f9; color: #7a8ba0; }
+    .stages .active { background: #eaf3ff; color: var(--blue); font-weight: 700; }
+    .task-list { min-height: 0; overflow: auto; padding-top: 10px; border-top: 1px solid #dce7f2; }
+    .task-list h3 { margin-bottom: 8px; }
+    .task { display: grid; grid-template-columns: minmax(0, 1fr) 100px 90px; align-items: center; gap: 12px; min-height: 48px; padding: 7px 0; border-top: 1px solid #edf2f7; }
+    .task:first-of-type { border-top: 0; }
+    .task-state { display: inline-flex; align-items: center; gap: 5px; color: #617890; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #afbdd0; }
+    .task.processing .task-state { color: var(--blue); }
+    .task.processing .dot { background: var(--blue); }
+    .task.complete .task-state { color: var(--green); }
+    .task.complete .dot { background: #35aa6e; }
+    .task.failed .task-state { color: var(--red); }
+    .task.failed .dot { background: #cf4c4c; }
+    .download { justify-self: end; border: 0; background: transparent; color: var(--blue); font-weight: 700; }
+    .percent { justify-self: end; color: #60758d; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="page-head">
+      <h1>视频抽帧</h1>
+      <p>批量上传 MP4 视频，处理完成后在左侧点选视频，右侧查看处理结果。</p>
+    </header>
+
+    <section class="app" aria-label="视频批量处理演示界面">
+      <section class="card panel">
+        <h2>上传与处理</h2>
+        <div class="upload">
+          <strong>批量上传 MP4 视频</strong>
+          <span>点击选择文件，可一次添加多个素材</span>
+          <button type="button">选择视频</button>
+        </div>
+        <div class="queue">
+          <header>已添加素材 <span>4 个</span></header>
+          <div class="queue-row processing" data-name="夏季连衣裙展示.mp4">
+            <button class="queue-button" disabled type="button"><i class="thumb"></i><span class="name"><strong>夏季连衣裙展示.mp4</strong><small>正在处理，完成后可查看</small></span><span class="queue-progress"><i class="status-ring" style="--value:68%"></i><small>68%</small></span></button>
+            <button class="remove" type="button">×</button>
+          </div>
+          <div class="queue-row">
+            <button class="queue-button" disabled type="button"><i class="thumb b"></i><span class="name"><strong>小家电使用演示.mp4</strong><small>83.2 MB</small></span><span class="queue-progress"><i class="status-ring" style="--value:0%"></i><small>0%</small></span></button>
+            <button class="remove" type="button">×</button>
+          </div>
+          <div class="queue-row complete selected" data-name="新品收纳盒详情.mp4">
+            <button class="queue-button" type="button"><i class="thumb c"></i><span class="name"><strong>新品收纳盒详情.mp4</strong><small>点击查看处理结果</small></span><span class="queue-progress"><i class="status-ring" style="--value:100%"></i><small>100%</small></span></button>
+            <button class="remove" type="button">×</button>
+          </div>
+          <div class="queue-row failed">
+            <button class="queue-button" disabled type="button"><i class="thumb d"></i><span class="name"><strong>破损素材.mp4</strong><small>失败的视频不允许误预览</small></span><span class="queue-progress"><i class="status-ring" style="--value:100%"></i><small>失败</small></span></button>
+            <button class="remove" type="button">×</button>
+          </div>
+        </div>
+        <div class="settings">
+          <h3>抽帧设置</h3>
+          <div class="mode"><button class="active" type="button">随机抽帧</button><button type="button">间隔抽帧</button></div>
+          <label class="frame-field"><span>随机删除帧数</span><input aria-label="随机删除帧数" max="100" min="1" type="number" value="1"><b>帧</b></label>
+          <button class="primary" type="button">批量处理中...</button>
+        </div>
+        <footer class="source-foot">本次将处理 <b>4</b> 个视频素材</footer>
+      </section>
+
+      <section class="card panel">
+        <header class="result-head">
+          <h2>批量处理结果</h2>
+          <button class="download-all" type="button">下载全部视频</button>
+        </header>
+        <div class="preview done" id="preview">
+          <span class="badge" id="previewBadge">左侧选中的处理结果</span>
+          <span class="play" aria-hidden="true"></span>
+          <div class="preview-text">
+            <strong id="previewTitle">新品收纳盒详情.mp4</strong>
+            <span id="previewHint">这里就是查看处理后视频的位置；点击左侧其他已完成视频会切换。</span>
+          </div>
+        </div>
+        <section class="progress">
+          <div class="progress-head"><strong>整体处理进度</strong><b>38%</b></div>
+          <div class="track"><i></i></div>
+          <p>正在处理第 1 条视频：重新编码中。当前视频没完成前不会误显示为可预览。</p>
+          <div class="stages"><span class="active">上传素材</span><span class="active">重新编码</span><span>生成 MP4</span></div>
+        </section>
+        <section class="task-list">
+          <h3>处理任务</h3>
+          <div class="task processing"><span class="name"><strong>夏季连衣裙展示.mp4</strong><small>随机删除 1 帧 · 原声保留</small></span><span class="task-state"><i class="dot"></i>处理中</span><span class="percent">68%</span></div>
+          <div class="task"><span class="name"><strong>小家电使用演示.mp4</strong><small>随机删除 1 帧 · 原声保留</small></span><span class="task-state"><i class="dot"></i>等待处理</span><span class="percent">0%</span></div>
+          <div class="task complete"><span class="name"><strong>新品收纳盒详情.mp4</strong><small>随机删除 1 帧 · 原声保留</small></span><span class="task-state"><i class="dot"></i>已完成</span><button class="download" type="button">下载</button></div>
+          <div class="task failed"><span class="name"><strong>破损素材.mp4</strong><small>随机删除 1 帧 · 原声保留</small></span><span class="task-state"><i class="dot"></i>处理失败</span><span class="percent">编码失败</span></div>
+        </section>
+        <footer class="status">状态：正在处理第 1 条视频，已完成的视频可从左侧点选预览。</footer>
+      </section>
+    </section>
+  </main>
+  <script>
+    const rows = document.querySelectorAll('.queue-row.complete');
+    const title = document.getElementById('previewTitle');
+    const hint = document.getElementById('previewHint');
+    rows.forEach((row) => {
+      row.querySelector('.queue-button').addEventListener('click', () => {
+        rows.forEach((item) => item.classList.remove('selected'));
+        row.classList.add('selected');
+        title.textContent = row.dataset.name;
+        hint.textContent = '已切换到这个视频的处理后预览。';
+      });
+    });
+  </script>
+</body>
+</html>

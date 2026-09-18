@@ -8,6 +8,7 @@ import {
 } from '../db/couponTasks';
 import { getShopAuthStorage } from '../db/shops';
 import { submitFanCouponTask } from '../rpa/coupon/fanCoupon';
+import { submitProductCouponTask } from '../rpa/coupon/productCoupon';
 import type { CouponBatch, CouponRow } from '../shared/types';
 import type { AppDatabase } from '../db/database';
 
@@ -26,10 +27,35 @@ export function enqueueCouponBatch(
     concurrency?: number;
   }
 ) {
+  return enqueueCouponBatchKind(db, input, 'fan');
+}
+
+export function enqueueProductCouponBatch(
+  db: AppDatabase,
+  input: {
+    shopId: string;
+    fileName: string;
+    rows: CouponRow[];
+    concurrency?: number;
+  }
+) {
+  return enqueueCouponBatchKind(db, input, 'product');
+}
+
+function enqueueCouponBatchKind(
+  db: AppDatabase,
+  input: {
+    shopId: string;
+    fileName: string;
+    rows: CouponRow[];
+    concurrency?: number;
+  },
+  kind: 'fan' | 'product'
+) {
   const batch = createCouponBatch(db, input);
   if (!batch) throw new Error('创建优惠券任务失败');
   cancelledBatches.delete(batch.id);
-  void runCouponBatch(db, batch.id, input.concurrency ?? DEFAULT_COUPON_WORKER_CONCURRENCY);
+  void runCouponBatch(db, batch.id, input.concurrency ?? DEFAULT_COUPON_WORKER_CONCURRENCY, kind);
   return batch;
 }
 
@@ -40,7 +66,7 @@ export function cancelCouponBatch(db: AppDatabase, batchId: string) {
   return getCouponBatch(db, batchId);
 }
 
-async function runCouponBatch(db: AppDatabase, batchId: string, concurrency: number) {
+async function runCouponBatch(db: AppDatabase, batchId: string, concurrency: number, kind: 'fan' | 'product') {
   if (runningBatches.has(batchId)) return;
   runningBatches.add(batchId);
   updateCouponBatchStatus(db, batchId, 'running');
@@ -53,7 +79,7 @@ async function runCouponBatch(db: AppDatabase, batchId: string, concurrency: num
     await runWithConcurrency(
       listPendingCouponTasks(db, batchId),
       concurrency,
-      (task) => runCouponTask(db, batch.shopId, profile, task),
+      (task) => runCouponTask(db, batch.shopId, profile, task, kind),
       {
         delayMs: COUPON_TASK_GAP_MS,
         shouldStop: () => cancelledBatches.has(batchId)
@@ -80,12 +106,13 @@ async function runCouponTask(
   db: AppDatabase,
   shopId: string,
   profile: ReturnType<typeof getShopAuthStorage>,
-  task: CouponBatch['tasks'][number]
+  task: CouponBatch['tasks'][number],
+  kind: 'fan' | 'product'
 ) {
   updateCouponTaskStatus(db, task.id, 'running');
   try {
     const result = await withTimeout(
-      submitFanCouponTask(profile, {
+      (kind === 'product' ? submitProductCouponTask : submitFanCouponTask)(profile, {
         ...task,
         shopId
       }),

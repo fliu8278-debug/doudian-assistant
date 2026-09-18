@@ -32,6 +32,11 @@ export async function setCurrentShop(shopId: string) {
   return readJson<{ ok: boolean }>(response);
 }
 
+export async function deleteShop(shopId: string) {
+  const response = await fetch(`/api/shops/${shopId}`, { method: 'DELETE' });
+  return readJson<{ ok: boolean }>(response);
+}
+
 export async function openShopLogin(shopId: string) {
   const response = await fetch(`/api/shops/${shopId}/open-login`, { method: 'POST' });
   return readJson<{ opened: boolean; reused: boolean }>(response);
@@ -77,6 +82,30 @@ export async function getCouponBatch(batchId: string) {
 
 export async function stopCouponBatch(batchId: string) {
   const response = await fetch(`/api/coupon-batches/${batchId}/stop`, { method: 'POST' });
+  return readJson<CouponBatch>(response);
+}
+
+export async function createProductCouponBatch(input: {
+  shopId: string;
+  fileName: string;
+  rows: CouponRow[];
+  concurrency?: number;
+}) {
+  const response = await fetch('/api/product-coupon-batches', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input)
+  });
+  return readJson<CouponBatch>(response);
+}
+
+export async function getProductCouponBatch(batchId: string) {
+  const response = await fetch(`/api/product-coupon-batches/${batchId}`);
+  return readJson<CouponBatch>(response);
+}
+
+export async function stopProductCouponBatch(batchId: string) {
+  const response = await fetch(`/api/product-coupon-batches/${batchId}/stop`, { method: 'POST' });
   return readJson<CouponBatch>(response);
 }
 

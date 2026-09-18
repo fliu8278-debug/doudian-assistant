@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { DatabaseSync } from 'node:sqlite';
 import { openDatabase } from './database';
-import { createShop, getShopAuthStorage, listShops, setCurrentShop, syncShopSnapshot } from './shops';
+import { createShop, deleteShop, getShopAuthStorage, listShops, setCurrentShop, syncShopSnapshot } from './shops';
 
 let tempDir = '';
 let db: DatabaseSync | null = null;
@@ -83,6 +83,18 @@ describe('database', () => {
     expect(firstAuth.cookiePath).toBe(join('data', 'cookies', `cookies_${first.id}.json`));
     expect(secondAuth.cookiePath).toBe(join('data', 'cookies', `cookies_${second.id}.json`));
     expect(firstAuth.cookiePath).not.toBe(secondAuth.cookiePath);
+  });
+
+  it('removes a shop and selects the remaining shop as current', () => {
+    db = openDatabase(testDbPath());
+    const first = createShop(db, { name: '主店', remark: '', officialAccountName: '主账号' });
+    const second = createShop(db, { name: '多余店铺', remark: '', officialAccountName: '测试账号' });
+    setCurrentShop(db, second.id);
+
+    deleteShop(db, second.id);
+
+    expect(listShops(db)).toEqual([expect.objectContaining({ id: first.id, current: true })]);
+    expect(db.prepare('select shop_id from browser_profiles where shop_id = ?').get(second.id)).toBeUndefined();
   });
 
   it('syncs a logged-in shop snapshot', () => {

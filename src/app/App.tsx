@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import type { CouponBatch, CouponRow, NewcomerGiftBatch, NewcomerGiftRow, Shop } from '../shared/types';
 import { normalizeCouponRow, validateCouponBatchTime, validateCouponRow } from '../imports/couponRows';
 import { normalizeNewcomerGiftRow, validateNewcomerGiftRow } from '../imports/newcomerGiftRows';
-import { createCouponBatch, createNewcomerGiftBatch, createVideoFrameExtraction, getCouponBatch, getNewcomerGiftBatch, getShops, getVideoFrameExtraction, stopCouponBatch, stopNewcomerGiftBatch } from './api';
+import { createCouponBatch, createNewcomerGiftBatch, createProductCouponBatch, createVideoFrameExtraction, getCouponBatch, getNewcomerGiftBatch, getProductCouponBatch, getShops, getVideoFrameExtraction, stopCouponBatch, stopNewcomerGiftBatch, stopProductCouponBatch } from './api';
 import { UpdateDialog } from './components/UpdateDialog';
 import { ShopList } from './pages/shops/ShopList';
 import { updateActionLabel, useUpdater, type UpdateState } from './updater';
@@ -13,6 +13,7 @@ type Page =
   | 'shops'
   | 'accountStatus'
   | 'coupon'
+  | 'productCoupon'
   | 'newcomerGift'
   | 'productSearch'
   | 'titleCheck'
@@ -105,7 +106,8 @@ export function App() {
           </div>
           <div className="sidebarNavGroup">
             <span className="sidebarNavLabel">营销</span>
-            <button className={navClass(page === 'coupon', 'sidebarNavItem')} onClick={() => setPage('coupon')} type="button"><NavIcon name="coupon" />建立优惠券</button>
+            <button className={navClass(page === 'coupon', 'sidebarNavItem')} onClick={() => setPage('coupon')} type="button"><NavIcon name="coupon" />涨粉券</button>
+            <button className={navClass(page === 'productCoupon', 'sidebarNavItem')} onClick={() => setPage('productCoupon')} type="button"><NavIcon name="coupon" />商品优惠券</button>
             <button className={navClass(page === 'newcomerGift', 'sidebarNavItem')} onClick={() => setPage('newcomerGift')} type="button"><NavIcon name="gift" />新人礼金</button>
           </div>
           <div className="sidebarNavGroup">
@@ -152,6 +154,8 @@ export function App() {
           />
         ) : page === 'newcomerGift' ? (
           <NewcomerGiftWorkbench currentShop={currentShop} shops={shops} />
+        ) : page === 'productCoupon' ? (
+          <ProductCouponWorkbench currentShop={currentShop} shops={shops} />
         ) : page === 'videoFrameExtraction' ? (
           <VideoFrameRateWorkbench />
         ) : page === 'productSearch' ? (
@@ -769,7 +773,7 @@ function NewcomerGiftWorkbench({ currentShop, shops }: { currentShop?: Shop; sho
   );
 }
 
-function CouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Shop[] }) {
+export function CouponWorkbench({ currentShop, shops, kind = 'fan' }: { currentShop?: Shop; shops: Shop[]; kind?: 'fan' | 'product' }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedShopId, setSelectedShopId] = useState(currentShop?.id ?? '');
   const [startTime, setStartTime] = useState('2026-08-28 00:00:00');
@@ -810,17 +814,16 @@ function CouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Sh
     if (!activeBatch || activeBatch.status === 'success' || activeBatch.status === 'failed') return;
 
     const timer = window.setInterval(async () => {
-      setActiveBatch(await getCouponBatch(activeBatch.id));
+      setActiveBatch(kind === 'product' ? await getProductCouponBatch(activeBatch.id) : await getCouponBatch(activeBatch.id));
     }, 1000);
 
     return () => window.clearInterval(timer);
   }, [activeBatch]);
 
   function downloadTemplate() {
-    downloadWorkbook('涨粉券导入模板.xlsx', [
-      ['款号', '满减门槛', '减免金额'],
-      ['216704', '300', '5']
-    ]);
+    downloadWorkbook(kind === 'product' ? '商品优惠券导入模板.xlsx' : '涨粉券导入模板.xlsx', kind === 'product'
+      ? [['款号', '优惠券名称', '满减门槛', '减免金额'], ['216704', '216704-商品券', '300', '5']]
+      : [['款号', '满减门槛', '减免金额'], ['216704', '300', '5']]);
   }
 
   async function importTemplate(file: File | undefined) {
@@ -854,7 +857,7 @@ function CouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Sh
     if (!selectedShop || !canSubmit) return;
     setRunMessage(`正在提交 ${validRows.length} 条建券任务，并发 ${concurrency} 个窗口...`);
     try {
-      const batch = await createCouponBatch({
+      const batch = await (kind === 'product' ? createProductCouponBatch : createCouponBatch)({
         shopId: selectedShop.id,
         fileName: fileName || '手动导入',
         rows: validRows,
@@ -871,7 +874,7 @@ function CouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Sh
     if (!activeBatch || activeBatch.status !== 'running') return;
     setRunMessage('正在停止建券任务，已开始的页面会处理完当前提交，未开始的任务不再执行。');
     try {
-      setActiveBatch(await stopCouponBatch(activeBatch.id));
+      setActiveBatch(kind === 'product' ? await stopProductCouponBatch(activeBatch.id) : await stopCouponBatch(activeBatch.id));
       setRunMessage('已发送停止指令，未开始的建券任务已停止。');
     } catch (caught) {
       setRunMessage(caught instanceof Error ? caught.message : '停止任务失败');
@@ -880,11 +883,11 @@ function CouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Sh
 
   return (
     <div className="workspacePage marketingWorkspace">
-      <div className="workspaceBreadcrumb">营销 / 建立优惠券</div>
+      <div className="workspaceBreadcrumb">营销 / {kind === 'product' ? '商品优惠券' : '涨粉券'}</div>
       <div className="pageHeader workspaceHeader">
         <div>
-          <h1>涨粉券建立</h1>
-          <p>先设置本批领取时间，再导入款号和满减金额。</p>
+          <h1>{kind === 'product' ? '商品优惠券建立' : '涨粉券建立'}</h1>
+          <p>先设置本批领取时间，再导入款号{kind === 'product' ? '、优惠券名称' : ''}和满减金额。</p>
         </div>
         <div className="buttonRow">
           <button onClick={downloadTemplate} type="button">下载模板</button>
@@ -900,7 +903,7 @@ function CouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Sh
       </div>
 
       <div className="notice">
-        本批店铺：{selectedShop?.name ?? '未选择'}。涨粉账户、有效天数、续期、发放量、限领和商品范围按固定规则处理。
+        本批店铺：{selectedShop?.name ?? '未选择'}。{kind === 'product' ? '有效天数、续期、发放量、限领和指定商品范围按固定规则处理。' : '涨粉账户、有效天数、续期、发放量、限领和商品范围按固定规则处理。'}
       </div>
 
       <section className="couponSettingsPanel" aria-labelledby="coupon-settings-title">
@@ -992,7 +995,7 @@ function CouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Sh
           ) : (
             <div className="emptyTableState">
               <strong>还没有导入表格</strong>
-              <span>模板只需要填：款号、满减门槛、减免金额。</span>
+              <span>模板只需要填：款号、满减门槛、减免金额{kind === 'product' ? '；优惠券名称（可选）' : ''}。</span>
             </div>
           )}
         </div>
@@ -1050,6 +1053,10 @@ function CouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Sh
       </section>
     </div>
   );
+}
+
+export function ProductCouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Shop[] }) {
+  return <CouponWorkbench currentShop={currentShop} kind="product" shops={shops} />;
 }
 
 function previewCouponRow(row: RawImportRow, rowNumber: number, time: { startTime: string; endTime: string }): CouponPreviewRow {

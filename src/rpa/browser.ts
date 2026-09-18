@@ -10,6 +10,7 @@ export type BrowserProfile = {
 export const DOUDIAN_HOME_URL = 'https://fxg.jinritemai.com/ffa/mshop/homepage/index';
 export const DOUDIAN_COUPON_HOME_URL = 'https://fxg.jinritemai.com/ffa/marketing/coupon/home';
 export const DOUDIAN_FAN_COUPON_CREATE_URL = 'https://fxg.jinritemai.com/ffa/marketing/coupon/detail?type=2&categorySource=4&from_page=marketing_tool_page_create';
+export const DOUDIAN_PRODUCT_COUPON_CREATE_URL = 'https://fxg.jinritemai.com/ffa/marketing/coupon/detail?type=1&categorySource=1&scope=part&discount_type=2&from_page=marketing_tool_page_create';
 export const DOUDIAN_NEWCOMER_GIFT_CREATE_URL = 'https://fxg.jinritemai.com/ffa/marketing/union/allowance/create?activityId=7089387213862994213&from_page=doudian_homepage';
 
 export async function loadShopCookies(context: BrowserContext, profile: BrowserProfile) {

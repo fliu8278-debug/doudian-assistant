@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { couponsRouter } from './routes/coupons';
 import { healthRouter } from './routes/health';
 import { newcomerGiftsRouter } from './routes/newcomerGifts';
+import { productCouponsRouter } from './routes/productCoupons';
 import { shopsRouter } from './routes/shops';
 import { createVideoFrameExtractionRouter } from './routes/videoFrameExtraction';
 import { VideoFrameExtractionManager } from './videoFrameExtraction';
@@ -25,6 +26,7 @@ export function createApp(staticDir = defaultStaticDir()) {
   app.use('/api', shopsRouter);
   app.use('/api', couponsRouter);
   app.use('/api', newcomerGiftsRouter);
+  app.use('/api', productCouponsRouter);
   app.use('/api', createVideoFrameExtractionRouter(new VideoFrameExtractionManager({
     ffmpegPath: process.env.DOUDIAN_FFMPEG_PATH || resolve('vendor', 'ffmpeg', 'win32-x64', 'ffmpeg.exe'),
     ffprobePath: process.env.DOUDIAN_FFPROBE_PATH || resolve('vendor', 'ffmpeg', 'win32-x64', 'ffprobe.exe')

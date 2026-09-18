@@ -6,11 +6,22 @@ export function findPriceRange(text: string) {
   return text.replace(/\s+/g, ' ').match(PRICE_RANGE_PATTERN)?.[0] ?? null;
 }
 
-export async function assertRowsHaveNoPriceRange(rows: Locator[], keyword: string) {
+export function isPriceRange(text: string) {
+  return findPriceRange(text) !== null;
+}
+
+export function isSelfOperatedProduct(text: string) {
+  return text.includes('自营品');
+}
+
+export function shouldSelectProductRow(text: string) {
+  return !isPriceRange(text) && !isSelfOperatedProduct(text);
+}
+
+export async function selectableProductRows(rows: Locator[]) {
+  const selectable: Locator[] = [];
   for (const row of rows) {
-    const matched = findPriceRange(await row.innerText().catch(() => ''));
-    if (matched) {
-      throw new Error(`商品 ${keyword} 是区间价 ${matched}，不建立任务`);
-    }
+    if (shouldSelectProductRow(await row.innerText().catch(() => ''))) selectable.push(row);
   }
+  return selectable;
 }

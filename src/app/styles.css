@@ -2010,6 +2010,8 @@ button:disabled {
   flex: 0 1 auto;
 }
 
+.shopActions .dangerButton { color: #bf4545; }
+
 .expandMark {
   flex: 0 0 auto;
   color: #1769e0;

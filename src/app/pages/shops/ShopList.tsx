@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { NewShop, Shop, ShopStatus } from '../../../shared/types';
-import { addShop, openShopLogin, saveShopLogin, setCurrentShop, setShopStatus, syncShop } from '../../api';
+import { addShop, deleteShop, openShopLogin, saveShopLogin, setCurrentShop, setShopStatus, syncShop } from '../../api';
 
 type Props = {
   shops: Shop[];
@@ -21,6 +21,15 @@ const statusHint: Record<ShopStatus, string> = {
   need_login: '等待扫码绑定',
   expired: '需要重新验证'
 };
+
+export const SHOP_TOAST_DURATION = 5_000;
+
+export function scheduleShopToastDismissal(
+  onDismiss: () => void,
+  setTimer: (callback: () => void, delay: number) => number = (callback, delay) => window.setTimeout(callback, delay)
+) {
+  return setTimer(onDismiss, SHOP_TOAST_DURATION);
+}
 
 export function ShopList({ shops, loading, onChanged, refreshing, refreshedAt }: Props) {
   const [showAdd, setShowAdd] = useState(false);
@@ -98,6 +107,12 @@ export function ShopList({ shops, loading, onChanged, refreshing, refreshedAt }:
     return () => window.clearInterval(timer);
   }, [currentShop?.id, currentShop?.status]);
 
+  useEffect(() => {
+    if (!message) return;
+    const timeout = scheduleShopToastDismissal(() => setMessage(''));
+    return () => window.clearTimeout(timeout);
+  }, [message]);
+
   async function syncFromDoudian(shop: Shop, showMessage = true) {
     if (syncingRef.current) return;
     syncingRef.current = true;
@@ -167,7 +182,7 @@ export function ShopList({ shops, loading, onChanged, refreshing, refreshedAt }:
               <p>从当前店铺直接进入处理流程。</p>
             </div>
           </div>
-          <button type="button"><i aria-hidden="true">券</i><span>建立优惠券<small>创建营销活动</small></span></button>
+          <button type="button"><i aria-hidden="true">券</i><span>涨粉券<small>创建涨粉活动</small></span></button>
           <button type="button"><i aria-hidden="true">搜</i><span>商品搜索<small>定位商品信息</small></span></button>
           <button type="button"><i aria-hidden="true">视</i><span>视频抽帧<small>降低帧率并导出视频</small></span></button>
         </aside>
@@ -248,6 +263,11 @@ export function ShopList({ shops, loading, onChanged, refreshing, refreshedAt }:
                   </button>
                   <button disabled={shop.current} onClick={() => update(() => setCurrentShop(shop.id))}>
                     {shop.current ? '当前' : '设为当前'}
+                  </button>
+                  <button className="dangerButton" onClick={() => {
+                    if (window.confirm(`确认删除店铺「${shop.name}」吗？`)) void update(() => deleteShop(shop.id));
+                  }}>
+                    删除店铺
                   </button>
                   <span className="expandMark">{expandedShopId === shop.id ? '收起' : '展开'}</span>
                 </div>

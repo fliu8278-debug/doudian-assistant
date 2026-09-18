@@ -5,7 +5,8 @@ import type { ShopAuthStorage } from '../db/shops';
 import { appDataPath } from '../paths';
 import { DOUDIAN_NEWCOMER_GIFT_CREATE_URL } from './browser';
 import { openDoudianShopPage } from './doudianSession';
-import { assertRowsHaveNoPriceRange } from './priceRange';
+import { selectableProductRows } from './priceRange';
+import { fillDoudianDateTimeRange } from './coupon/timePicker';
 
 export type NewcomerGiftDraft = {
   shopId: string;
@@ -72,52 +73,7 @@ function activityNameField(page: Page) {
 }
 
 async function fillAllowanceTime(page: Page, startTime: string, endTime: string) {
-  const start = parseDateTime(startTime);
-  const end = parseDateTime(endTime);
-
-  await page.locator('.arco-picker-range input[placeholder="开始日期"], input[placeholder="开始日期"]').first().click();
-  await clickCalendarDate(page, start);
-  await clickCalendarDate(page, end);
-  await page.getByText('选择时间', { exact: true }).last().click();
-  await selectTime(page, 0, start.getHours());
-  await selectTime(page, 1, start.getMinutes());
-  await selectTime(page, 2, start.getSeconds());
-  await selectTime(page, 3, end.getHours());
-  await selectTime(page, 4, end.getMinutes());
-  await selectTime(page, 5, end.getSeconds());
-  await page.getByText('确定', { exact: true }).last().click();
-  await page.waitForTimeout(500);
-
-  const values = await page.locator('.arco-picker-range input:visible, input[placeholder="开始日期"]:visible, input[placeholder="结束日期"]:visible').evaluateAll((inputs) =>
-    inputs.map((input) => (input as HTMLInputElement).value.replace(/\//g, '-'))
-  );
-  if (values[0] !== startTime || values[1] !== endTime) {
-    throw new Error(`活动时间未生效，应为 ${startTime} - ${endTime}，实际为 ${values.join(' - ')}`);
-  }
-}
-
-async function clickCalendarDate(page: Page, date: Date) {
-  const panel = page
-    .locator('.arco-panel-date')
-    .filter({ hasText: `${date.getFullYear()}年${date.getMonth() + 1}月` })
-    .first();
-
-  await panel
-    .locator('.arco-picker-cell-in-view')
-    .filter({ hasText: new RegExp(`^${date.getDate()}$`) })
-    .first()
-    .click();
-}
-
-async function selectTime(page: Page, columnIndex: number, value: number) {
-  const text = String(value).padStart(2, '0');
-  await page
-    .locator('.arco-timepicker-list')
-    .nth(columnIndex)
-    .locator('.arco-timepicker-cell')
-    .filter({ hasText: new RegExp(`^${text}$`) })
-    .first()
-    .click();
+  await fillDoudianDateTimeRange(page, startTime, endTime);
 }
 
 async function chooseRadioGroup(page: Page, fieldLabel: string, optionText: string, selector?: string) {
@@ -155,16 +111,15 @@ async function pickAllowanceProduct(page: Page, keyword: string) {
 
 async function checkMatchingProductRows(page: Page, keyword: string, rowSelector: string) {
   const rows = await page.locator(rowSelector).filter({ hasText: keyword }).all();
+  const selectableRows = await selectableProductRows(rows);
   let checkedCount = 0;
 
-  await assertRowsHaveNoPriceRange(rows, keyword);
-
-  for (const row of rows) {
+  for (const row of selectableRows) {
     if (await checkProductRow(page, row)) checkedCount += 1;
   }
 
   if (checkedCount === 0) {
-    throw new Error(`没有找到可勾选的商品：${keyword}`);
+    throw new Error(`商品搜索结果均为区间价或自营品，已跳过：${keyword}`);
   }
 }
 

@@ -93,6 +93,25 @@ export function setCurrentShop(db: AppDatabase, shopId: string) {
   }
 }
 
+export function deleteShop(db: AppDatabase, shopId: string) {
+  ensureShopColumns(db);
+  ensureBrowserProfileColumns(db);
+  const shop = db.prepare('select current from shops where id = ?').get(shopId) as { current: number } | undefined;
+  if (!shop) throw new Error(`店铺不存在: ${shopId}`);
+
+  db.exec('begin');
+  try {
+    db.prepare('delete from shops where id = ?').run(shopId);
+    if (shop.current) {
+      db.prepare('update shops set current = 1 where id = (select id from shops order by created_at desc limit 1)').run();
+    }
+    db.exec('commit');
+  } catch (error) {
+    db.exec('rollback');
+    throw error;
+  }
+}
+
 export function updateShopStatus(
   db: AppDatabase,
   shopId: string,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createVideoFrameExtraction, getVideoFrameExtraction } from './api';
+import { createProductCouponBatch, createVideoFrameExtraction, deleteShop, getVideoFrameExtraction } from './api';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -33,5 +33,27 @@ describe('video frame extraction API', () => {
     const job = await getVideoFrameExtraction('job-1');
 
     expect(job.downloadUrl).toBe('/api/video-frame-extraction/job-1/download');
+  });
+});
+
+describe('shop API', () => {
+  it('deletes a selected shop', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await deleteShop('shop-1');
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/shops/shop-1', { method: 'DELETE' });
+  });
+});
+
+describe('product coupon API', () => {
+  it('sends product coupon batches to their own endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 'batch-1', tasks: [] })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await createProductCouponBatch({ shopId: 'shop-1', fileName: '商品券.xlsx', rows: [], concurrency: 1 });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/product-coupon-batches', expect.objectContaining({ method: 'POST' }));
   });
 });

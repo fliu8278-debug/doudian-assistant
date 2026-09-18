@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createShop, getShopAuthStorage, listShops, setCurrentShop, syncShopSnapshot, updateShopSnapshot, updateShopStatus } from '../../db/shops';
+import { createShop, deleteShop, getShopAuthStorage, listShops, setCurrentShop, syncShopSnapshot, updateShopSnapshot, updateShopStatus } from '../../db/shops';
 import { openDoudianShopWindow, saveDoudianShopCookies } from '../../rpa/doudianSession';
 import { readDoudianShopSnapshot } from '../../rpa/shopSnapshot';
 import type { ShopStatus } from '../../shared/types';
@@ -45,6 +45,15 @@ shopsRouter.post('/shops/sync-visible', (request, response) => {
 shopsRouter.post('/shops/:id/current', (request, response) => {
   setCurrentShop(db, request.params.id);
   response.json({ ok: true });
+});
+
+shopsRouter.delete('/shops/:id', (request, response) => {
+  try {
+    deleteShop(db, request.params.id);
+    response.json({ ok: true });
+  } catch (caught) {
+    response.status(404).json({ error: caught instanceof Error ? caught.message : '店铺不存在' });
+  }
 });
 
 shopsRouter.post('/shops/:id/sync', async (request, response) => {
