@@ -6,12 +6,13 @@ import { fanCouponSelectors, productCouponSelectors } from './selectors';
 import type { Locator, Page } from 'playwright';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { selectableProductRows } from '../priceRange';
+import { selectableProductRows, type ProductSelectionMode } from '../priceRange';
 import { appDataPath } from '../../paths';
 import { fillDoudianDateTimeRange } from './timePicker';
 
 export type ProductCouponDraft = CouponRow & {
   shopId: string;
+  selectionMode?: ProductSelectionMode;
 };
 
 export type SubmitProductCouponOptions = {
@@ -26,6 +27,7 @@ export async function submitProductCouponTask(
   options: SubmitProductCouponOptions = {}
 ) {
   const { page } = await openDoudianShopPage(profile, DOUDIAN_PRODUCT_COUPON_CREATE_URL, { headless: false, newPage: true });
+  const selectionMode = draft.selectionMode ?? 'nonSelfOperated';
   page.setDefaultTimeout(15_000);
   await page.waitForLoadState('domcontentloaded');
   await waitForCouponForm(page);
@@ -58,7 +60,7 @@ export async function submitProductCouponTask(
     await pacedStep('选择每人限领', () => choosePerUserLimit(page));
     await pacedStep('选择商品范围', () => chooseRadio(page, productCouponSelectors.specifiedProduct));
     await pacedStep('选择商品选择方式', () => chooseRadio(page, productCouponSelectors.onlineProductSelection));
-    await pacedStep('添加指定商品', () => pickProduct(page, draft.productSearchKeyword || draft.sku));
+    await pacedStep('添加指定商品', () => pickProduct(page, draft.productSearchKeyword || draft.sku, selectionMode));
     await pacedStep('核对建券数据', () => assertCouponDraft(page, draft));
   } catch (caught) {
     const screenshotPath = await saveFailureScreenshot(page, draft.couponName);
@@ -307,7 +309,7 @@ async function choosePerUserLimit(page: Page) {
   await page.getByText('不限', { exact: true }).last().click();
 }
 
-async function pickProduct(page: Page, keyword: string) {
+async function pickProduct(page: Page, keyword: string, selectionMode: ProductSelectionMode) {
   await clickVisibleText(page, '添加商品');
   await page.getByText('添加商品', { exact: true }).last().waitFor({ state: 'visible', timeout: 15_000 });
   await chooseProductSearchType(page);
@@ -322,9 +324,9 @@ async function pickProduct(page: Page, keyword: string) {
     throw new Error(empty ? `商品搜索无结果：${keyword}` : `商品搜索结果未加载：${keyword}`);
   });
 
-  await checkMatchingProductRows(page, keyword, 'tr, .semi-table-row, .ecom-mcenter-table-row');
+  await checkMatchingProductRows(page, keyword, 'tr, .semi-table-row, .ecom-mcenter-table-row', selectionMode);
   await (await bottomVisibleButton(page, '选择')).click();
-  await keepNonSelfOperatedIfPrompted(page);
+  if (selectionMode === 'nonSelfOperated') await keepNonSelfOperatedIfPrompted(page);
   await page.waitForTimeout(800);
   if (!page.url().includes('/coupon/detail')) {
     throw new Error(`商品选择后意外离开建券页：${page.url()}`);
@@ -336,9 +338,9 @@ async function keepNonSelfOperatedIfPrompted(page: Page) {
   if (await button.count()) await button.click();
 }
 
-async function checkMatchingProductRows(page: Page, keyword: string, rowSelector: string) {
+async function checkMatchingProductRows(page: Page, keyword: string, rowSelector: string, selectionMode: ProductSelectionMode) {
   const rows = await page.locator(rowSelector).filter({ hasText: keyword }).all();
-  const selectableRows = await selectableProductRows(rows);
+  const selectableRows = await selectableProductRows(rows, selectionMode);
   let checkedCount = 0;
 
   for (const row of selectableRows) {
@@ -347,7 +349,7 @@ async function checkMatchingProductRows(page: Page, keyword: string, rowSelector
   }
 
   if (checkedCount === 0) {
-    throw new Error(`商品搜索结果均为区间价或自营品，已跳过：${keyword}`);
+    throw new Error(`商品搜索结果没有符合当前筛选条件的链接，已跳过：${keyword}`);
   }
 }
 

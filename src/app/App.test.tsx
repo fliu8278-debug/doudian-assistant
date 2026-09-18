@@ -151,10 +151,15 @@ describe('应用侧边栏', () => {
     expect(dismiss).toHaveBeenCalledOnce();
   });
 
-  it('keeps three separate coupon entries and gives product coupons their own batch form', () => {
+  it('keeps four separate coupon entries and gives subsidy coupons the product batch form', () => {
     const appMarkup = renderToStaticMarkup(<App />);
     expect(appMarkup).toContain('新人礼金');
     expect(appMarkup).toContain('商品优惠券');
+    expect(appMarkup).toContain('国补优惠券');
+    expect(appMarkup).toContain('data-icon="fans"');
+    expect(appMarkup).toContain('data-icon="tag"');
+    expect(appMarkup).toContain('data-icon="subsidy"');
+    expect(appMarkup).toContain('data-icon="tuning"');
     expect(appMarkup).toContain('涨粉券');
 
     const markup = renderToStaticMarkup(<CouponWorkbench currentShop={undefined} shops={[]} />);
@@ -166,6 +171,11 @@ describe('应用侧边栏', () => {
     expect(productMarkup).toContain('商品优惠券建立');
     expect(productMarkup).toContain('优惠券名称（可选）');
     expect(productMarkup).toContain('领取结束时间');
+
+    const subsidyMarkup = renderToStaticMarkup(<AppModule.NationalSubsidyCouponWorkbench currentShop={undefined} shops={[]} />);
+    expect(subsidyMarkup).toContain('国补优惠券建立');
+    expect(subsidyMarkup).toContain('优惠券名称（可选）');
+    expect(subsidyMarkup).toContain('只选择自营品');
   });
 
   it('keeps fan coupon and product coupon labels separate', () => {

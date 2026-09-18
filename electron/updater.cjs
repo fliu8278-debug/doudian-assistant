@@ -68,7 +68,7 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
     return publish({ phase: 'not-available', version: undefined, releaseNotes: undefined, error: undefined });
   };
   const restart = () => {
-    if (state.phase === 'ready') autoUpdater.quitAndInstall();
+    if (state.phase === 'ready') autoUpdater.quitAndInstall(true, true);
   };
   const setBackground = (enabled) => {
     const next = publish({ backgroundEnabled: Boolean(enabled) });
@@ -87,6 +87,9 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
     pendingReleaseNotes: justUpdated ? undefined : settings.pendingReleaseNotes,
     pendingVersion: justUpdated ? undefined : settings.pendingVersion
   });
+  autoUpdater.logger = log;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.autoRunAppAfterInstall = true;
   autoUpdater.autoDownload = false;
   autoUpdater.on('checking-for-update', () => publish({ phase: 'checking', error: undefined }));
   autoUpdater.on('update-available', (info) => {

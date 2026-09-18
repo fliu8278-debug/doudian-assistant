@@ -14,6 +14,7 @@ type Page =
   | 'accountStatus'
   | 'coupon'
   | 'productCoupon'
+  | 'nationalSubsidyCoupon'
   | 'newcomerGift'
   | 'productSearch'
   | 'titleCheck'
@@ -106,8 +107,9 @@ export function App() {
           </div>
           <div className="sidebarNavGroup">
             <span className="sidebarNavLabel">营销</span>
-            <button className={navClass(page === 'coupon', 'sidebarNavItem')} onClick={() => setPage('coupon')} type="button"><NavIcon name="coupon" />涨粉券</button>
-            <button className={navClass(page === 'productCoupon', 'sidebarNavItem')} onClick={() => setPage('productCoupon')} type="button"><NavIcon name="coupon" />商品优惠券</button>
+            <button className={navClass(page === 'coupon', 'sidebarNavItem')} onClick={() => setPage('coupon')} type="button"><NavIcon name="fans" />涨粉券</button>
+            <button className={navClass(page === 'productCoupon', 'sidebarNavItem')} onClick={() => setPage('productCoupon')} type="button"><NavIcon name="tag" />商品优惠券</button>
+            <button className={navClass(page === 'nationalSubsidyCoupon', 'sidebarNavItem')} onClick={() => setPage('nationalSubsidyCoupon')} type="button"><NavIcon name="subsidy" />国补优惠券</button>
             <button className={navClass(page === 'newcomerGift', 'sidebarNavItem')} onClick={() => setPage('newcomerGift')} type="button"><NavIcon name="gift" />新人礼金</button>
           </div>
           <div className="sidebarNavGroup">
@@ -124,7 +126,7 @@ export function App() {
         <div className="sidebarFooter">
           <button className={navClass(page === 'tableTemplates', 'sidebarNavItem')} onClick={() => setPage('tableTemplates')} type="button"><NavIcon name="table" />表格模板</button>
           <button className={navClass(page === 'executionRecords', 'sidebarNavItem')} onClick={() => setPage('executionRecords')} type="button"><NavIcon name="history" />执行记录</button>
-          <button className={navClass(page === 'settings', 'sidebarNavItem')} onClick={() => setPage('settings')} type="button"><NavIcon name="settings" />设置</button>
+          <button className={navClass(page === 'settings', 'sidebarNavItem')} onClick={() => setPage('settings')} type="button"><NavIcon name="tuning" />设置</button>
         </div>
       </aside>
 
@@ -156,6 +158,8 @@ export function App() {
           <NewcomerGiftWorkbench currentShop={currentShop} shops={shops} />
         ) : page === 'productCoupon' ? (
           <ProductCouponWorkbench currentShop={currentShop} shops={shops} />
+        ) : page === 'nationalSubsidyCoupon' ? (
+          <NationalSubsidyCouponWorkbench currentShop={currentShop} shops={shops} />
         ) : page === 'videoFrameExtraction' ? (
           <VideoFrameRateWorkbench />
         ) : page === 'productSearch' ? (
@@ -472,20 +476,23 @@ function navClass(active: boolean, base = 'navItem') {
   return active ? `${base} active` : base;
 }
 
-type NavIconName = 'account' | 'coupon' | 'gift' | 'history' | 'list' | 'refresh' | 'search' | 'settings' | 'shop' | 'table' | 'video';
+type NavIconName = 'account' | 'coupon' | 'fans' | 'gift' | 'history' | 'list' | 'refresh' | 'search' | 'shop' | 'subsidy' | 'table' | 'tag' | 'tuning' | 'video';
 
 function NavIcon({ name }: { name: NavIconName }) {
   const paths: Record<NavIconName, string[]> = {
     account: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z', 'M4.5 20a7.5 7.5 0 0 1 15 0'],
     coupon: ['M4 8.5A2.5 2.5 0 0 0 6.5 6H18v4a2 2 0 1 1 0 4v4H6.5A2.5 2.5 0 0 0 4 15.5Z', 'M10 6v12'],
+    fans: ['M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z', 'M3.5 19a5.5 5.5 0 0 1 11 0', 'M16 8a2.5 2.5 0 1 0 0-5', 'M16 13.5a4.5 4.5 0 0 1 4.5 4.5'],
     gift: ['M5 10h14v10H5z', 'M3.5 7.5h17v3h-17z', 'M12 7.5V20', 'M12 7.5S8 7.5 8 5.25C8 3.5 10.4 4 12 7.5Zm0 0s4 0 4-2.25C16 3.5 13.6 4 12 7.5Z'],
     history: ['M4 12a8 8 0 1 0 2.35-5.65L4 8.7', 'M4 4v4.7h4.7', 'M12 7.5V12l3 2'],
     list: ['M8 6h11', 'M8 12h11', 'M8 18h11', 'M4.5 6h.01', 'M4.5 12h.01', 'M4.5 18h.01'],
     refresh: ['M19 8a7 7 0 1 0 1 5', 'M19 4v4h-4'],
     search: ['m20 20-4.5-4.5', 'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Z'],
-    settings: ['M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z', 'M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.1 2.1-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56v.1H11.8v-.1a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-2.1-2.1.06-.06A1.7 1.7 0 0 0 7.13 15a1.7 1.7 0 0 0-1.56-1.03h-.1v-2.94h.1A1.7 1.7 0 0 0 7.13 10a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.1-2.1.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.8 4.8v-.1h2.94v.1a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.1 2.1-.06.06A1.7 1.7 0 0 0 19.4 10a1.7 1.7 0 0 0 1.56 1.03h.1v2.94h-.1A1.7 1.7 0 0 0 19.4 15Z'],
     shop: ['M4 10V6l2-3h12l2 3v4', 'M5 10h14v10H5z', 'M9 20v-6h6v6', 'M4 6h16'],
+    subsidy: ['M12 3l7 3v5c0 4-3 7-7 10-4-3-7-6-7-10V6l7-3Z', 'M9 12h6', 'M12 9v6'],
     table: ['M4 5h16v14H4z', 'M4 10h16', 'M10 5v14'],
+    tag: ['M4 5h8l8 7-8 7H4z', 'M8 9h.01'],
+    tuning: ['M4 6h16', 'M4 12h16', 'M4 18h16', 'M9 4v4', 'M15 10v4', 'M11 16v4'],
     video: ['M4 6h11v12H4z', 'm15 10 5-3v10l-5-3']
   };
 
@@ -773,7 +780,7 @@ function NewcomerGiftWorkbench({ currentShop, shops }: { currentShop?: Shop; sho
   );
 }
 
-export function CouponWorkbench({ currentShop, shops, kind = 'fan' }: { currentShop?: Shop; shops: Shop[]; kind?: 'fan' | 'product' }) {
+export function CouponWorkbench({ currentShop, shops, kind = 'fan' }: { currentShop?: Shop; shops: Shop[]; kind?: 'fan' | 'product' | 'nationalSubsidy' }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedShopId, setSelectedShopId] = useState(currentShop?.id ?? '');
   const [startTime, setStartTime] = useState('2026-08-28 00:00:00');
@@ -814,14 +821,15 @@ export function CouponWorkbench({ currentShop, shops, kind = 'fan' }: { currentS
     if (!activeBatch || activeBatch.status === 'success' || activeBatch.status === 'failed') return;
 
     const timer = window.setInterval(async () => {
-      setActiveBatch(kind === 'product' ? await getProductCouponBatch(activeBatch.id) : await getCouponBatch(activeBatch.id));
+      setActiveBatch(kind !== 'fan' ? await getProductCouponBatch(activeBatch.id) : await getCouponBatch(activeBatch.id));
     }, 1000);
 
     return () => window.clearInterval(timer);
   }, [activeBatch]);
 
   function downloadTemplate() {
-    downloadWorkbook(kind === 'product' ? '商品优惠券导入模板.xlsx' : '涨粉券导入模板.xlsx', kind === 'product'
+    const productKind = kind !== 'fan';
+    downloadWorkbook(kind === 'nationalSubsidy' ? '国补优惠券导入模板.xlsx' : productKind ? '商品优惠券导入模板.xlsx' : '涨粉券导入模板.xlsx', productKind
       ? [['款号', '优惠券名称', '满减门槛', '减免金额'], ['216704', '216704-商品券', '300', '5']]
       : [['款号', '满减门槛', '减免金额'], ['216704', '300', '5']]);
   }
@@ -857,11 +865,12 @@ export function CouponWorkbench({ currentShop, shops, kind = 'fan' }: { currentS
     if (!selectedShop || !canSubmit) return;
     setRunMessage(`正在提交 ${validRows.length} 条建券任务，并发 ${concurrency} 个窗口...`);
     try {
-      const batch = await (kind === 'product' ? createProductCouponBatch : createCouponBatch)({
+      const batch = await (kind !== 'fan' ? createProductCouponBatch : createCouponBatch)({
         shopId: selectedShop.id,
         fileName: fileName || '手动导入',
         rows: validRows,
-        concurrency
+        concurrency,
+        ...(kind === 'nationalSubsidy' ? { selectionMode: 'selfOperated' as const } : {})
       });
       setActiveBatch(batch);
       setRunMessage(`任务已提交，后台按 ${concurrency} 个窗口并发执行，成功后自动关闭建券页。`);
@@ -874,7 +883,7 @@ export function CouponWorkbench({ currentShop, shops, kind = 'fan' }: { currentS
     if (!activeBatch || activeBatch.status !== 'running') return;
     setRunMessage('正在停止建券任务，已开始的页面会处理完当前提交，未开始的任务不再执行。');
     try {
-      setActiveBatch(kind === 'product' ? await stopProductCouponBatch(activeBatch.id) : await stopCouponBatch(activeBatch.id));
+       setActiveBatch(kind !== 'fan' ? await stopProductCouponBatch(activeBatch.id) : await stopCouponBatch(activeBatch.id));
       setRunMessage('已发送停止指令，未开始的建券任务已停止。');
     } catch (caught) {
       setRunMessage(caught instanceof Error ? caught.message : '停止任务失败');
@@ -883,11 +892,11 @@ export function CouponWorkbench({ currentShop, shops, kind = 'fan' }: { currentS
 
   return (
     <div className="workspacePage marketingWorkspace">
-      <div className="workspaceBreadcrumb">营销 / {kind === 'product' ? '商品优惠券' : '涨粉券'}</div>
+      <div className="workspaceBreadcrumb">营销 / {kind === 'nationalSubsidy' ? '国补优惠券' : kind === 'product' ? '商品优惠券' : '涨粉券'}</div>
       <div className="pageHeader workspaceHeader">
         <div>
-          <h1>{kind === 'product' ? '商品优惠券建立' : '涨粉券建立'}</h1>
-          <p>先设置本批领取时间，再导入款号{kind === 'product' ? '、优惠券名称' : ''}和满减金额。</p>
+            <h1>{kind === 'nationalSubsidy' ? '国补优惠券建立' : kind === 'product' ? '商品优惠券建立' : '涨粉券建立'}</h1>
+            <p>先设置本批领取时间，再导入款号{kind !== 'fan' ? '、优惠券名称' : ''}和满减金额。</p>
         </div>
         <div className="buttonRow">
           <button onClick={downloadTemplate} type="button">下载模板</button>
@@ -903,7 +912,7 @@ export function CouponWorkbench({ currentShop, shops, kind = 'fan' }: { currentS
       </div>
 
       <div className="notice">
-        本批店铺：{selectedShop?.name ?? '未选择'}。{kind === 'product' ? '有效天数、续期、发放量、限领和指定商品范围按固定规则处理。' : '涨粉账户、有效天数、续期、发放量、限领和商品范围按固定规则处理。'}
+         本批店铺：{selectedShop?.name ?? '未选择'}。{kind === 'nationalSubsidy' ? '只选择自营品，自动跳过区间价商品；有效天数、续期、发放量、限领和指定商品范围按固定规则处理。' : kind !== 'fan' ? '有效天数、续期、发放量、限领和指定商品范围按固定规则处理。' : '涨粉账户、有效天数、续期、发放量、限领和商品范围按固定规则处理。'}
       </div>
 
       <section className="couponSettingsPanel" aria-labelledby="coupon-settings-title">
@@ -995,7 +1004,7 @@ export function CouponWorkbench({ currentShop, shops, kind = 'fan' }: { currentS
           ) : (
             <div className="emptyTableState">
               <strong>还没有导入表格</strong>
-              <span>模板只需要填：款号、满减门槛、减免金额{kind === 'product' ? '；优惠券名称（可选）' : ''}。</span>
+              <span>模板只需要填：款号、满减门槛、减免金额{kind !== 'fan' ? '；优惠券名称（可选）' : ''}。</span>
             </div>
           )}
         </div>
@@ -1057,6 +1066,10 @@ export function CouponWorkbench({ currentShop, shops, kind = 'fan' }: { currentS
 
 export function ProductCouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Shop[] }) {
   return <CouponWorkbench currentShop={currentShop} kind="product" shops={shops} />;
+}
+
+export function NationalSubsidyCouponWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Shop[] }) {
+  return <CouponWorkbench currentShop={currentShop} kind="nationalSubsidy" shops={shops} />;
 }
 
 function previewCouponRow(row: RawImportRow, rowNumber: number, time: { startTime: string; endTime: string }): CouponPreviewRow {

@@ -26,4 +26,10 @@ describe('price range guard', () => {
     expect(shouldSelectProductRow('商品信息 237464 ¥449 - ¥749')).toBe(false);
     expect(shouldSelectProductRow('商品信息 216704 ¥269')).toBe(true);
   });
+
+  it('keeps only single-price self-operated product links for national subsidy coupons', () => {
+    expect(shouldSelectProductRow('商品信息 216704 自营品 ¥269', 'selfOperated')).toBe(true);
+    expect(shouldSelectProductRow('商品信息 216704 ¥269', 'selfOperated')).toBe(false);
+    expect(shouldSelectProductRow('商品信息 216704 自营品 ¥269 - ¥299', 'selfOperated')).toBe(false);
+  });
 });

@@ -1,4 +1,5 @@
 import type { CouponBatch, CouponRow, NewcomerGiftBatch, NewcomerGiftRow, NewShop, Shop, ShopStatus } from '../shared/types';
+import type { ProductSelectionMode } from '../rpa/priceRange';
 
 export type VideoFrameExtractionJob = {
   id: string;
@@ -90,6 +91,7 @@ export async function createProductCouponBatch(input: {
   fileName: string;
   rows: CouponRow[];
   concurrency?: number;
+  selectionMode?: ProductSelectionMode;
 }) {
   const response = await fetch('/api/product-coupon-batches', {
     method: 'POST',

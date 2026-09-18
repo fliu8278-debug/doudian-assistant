@@ -60,6 +60,7 @@ describe('startAutoUpdater', () => {
     coordinator.restart();
 
     expect(autoUpdater.quitAndInstall).toHaveBeenCalledOnce();
+    expect(autoUpdater.quitAndInstall).toHaveBeenCalledWith(true, true);
   });
 
   it('在真正下载前重新检查最新版本', async () => {

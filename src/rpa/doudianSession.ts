@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { chromium, type BrowserContext, type Page } from 'playwright';
 import type { BrowserProfile } from './browser';
 import { DOUDIAN_HOME_URL, loadShopCookies, saveShopCookies } from './browser';
+import { appDataPath } from '../paths';
 
 type ContextBinding = BrowserProfile & {
   headless: boolean;
@@ -10,6 +11,23 @@ type ContextBinding = BrowserProfile & {
 const activeContexts = new Map<string, BrowserContext>();
 const activeContextBindings = new Map<string, ContextBinding>();
 const startingContexts = new Map<string, { binding: ContextBinding; promise: Promise<BrowserContext> }>();
+
+export async function launchShopContext(
+  profile: BrowserProfile,
+  headless: boolean,
+  launch: (profilePath: string, options: { headless: boolean }) => Promise<BrowserContext> = (profilePath, options) => chromium.launchPersistentContext(profilePath, {
+    ...options,
+    executablePath: process.env.DOUDIAN_BROWSER_EXECUTABLE,
+    viewport: { width: 1360, height: 860 },
+    args: ['--no-proxy-server']
+  })
+) {
+  try {
+    return await launch(profile.profilePath, { headless });
+  } catch {
+    return launch(appDataPath('runtime-profiles', profile.shopId), { headless });
+  }
+}
 
 export async function openDoudianShopWindow(
   profile: BrowserProfile,
@@ -87,12 +105,7 @@ async function getOrStartContext(binding: ContextBinding) {
   const starting = startingContexts.get(binding.shopId);
   if (starting && sameBinding(starting.binding, binding)) return starting.promise;
 
-  const promise = chromium.launchPersistentContext(binding.profilePath, {
-    headless: binding.headless,
-    executablePath: process.env.DOUDIAN_BROWSER_EXECUTABLE,
-    viewport: { width: 1360, height: 860 },
-    args: ['--no-proxy-server']
-  }).then(async (context) => {
+  const promise = launchShopContext(binding, binding.headless).then(async (context) => {
     activeContexts.set(binding.shopId, context);
     activeContextBindings.set(binding.shopId, binding);
     context.on('close', () => {
