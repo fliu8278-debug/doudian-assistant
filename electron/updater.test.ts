@@ -31,6 +31,11 @@ describe('startAutoUpdater', () => {
 
   it('发布下载进度，并且只有用户确认后才重启安装', async () => {
     const autoUpdater = createUpdater();
+    let checks = 0;
+    autoUpdater.checkForUpdates = vi.fn(async () => {
+      checks += 1;
+      if (checks === 2) autoUpdater.emit('update-available', { version: '0.2.0', releaseNotes: '修复视频预览' });
+    });
     const broadcast = vi.fn();
 
     const coordinator = startAutoUpdater({
@@ -46,7 +51,7 @@ describe('startAutoUpdater', () => {
     autoUpdater.emit('update-downloaded', { version: '0.2.0', releaseNotes: '修复视频预览' });
 
     expect(autoUpdater.autoDownload).toBe(false);
-    expect(autoUpdater.checkForUpdates).toHaveBeenCalledOnce();
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2);
     expect(autoUpdater.downloadUpdate).toHaveBeenCalledOnce();
     expect(broadcast).toHaveBeenCalledWith(expect.objectContaining({ phase: 'downloading', percent: 42 }));
     expect(broadcast).toHaveBeenLastCalledWith(expect.objectContaining({ phase: 'ready', version: '0.2.0' }));
@@ -55,6 +60,38 @@ describe('startAutoUpdater', () => {
     coordinator.restart();
 
     expect(autoUpdater.quitAndInstall).toHaveBeenCalledOnce();
+  });
+
+  it('在真正下载前重新检查最新版本', async () => {
+    const autoUpdater = createUpdater();
+    let checks = 0;
+    autoUpdater.checkForUpdates = vi.fn(async () => {
+      checks += 1;
+      if (checks === 2) autoUpdater.emit('update-available', { version: '0.1.3' });
+    });
+    const coordinator = startAutoUpdater({
+      app: { isPackaged: true, getVersion: () => '0.1.1' }, autoUpdater, log: { error: vi.fn() }
+    });
+
+    await new Promise(setImmediate);
+    autoUpdater.emit('update-available', { version: '0.1.2' });
+    await coordinator.download();
+
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2);
+    expect(autoUpdater.downloadUpdate).toHaveBeenCalledOnce();
+    expect(coordinator.getState()).toMatchObject({ phase: 'downloading', version: '0.1.3' });
+  });
+
+  it('检查到没有更新时清除旧版本残留', () => {
+    const autoUpdater = createUpdater();
+    const coordinator = startAutoUpdater({
+      app: { isPackaged: true, getVersion: () => '0.1.1' }, autoUpdater, log: { error: vi.fn() }
+    });
+
+    autoUpdater.emit('update-available', { version: '0.1.2', releaseNotes: '旧版本' });
+    autoUpdater.emit('update-not-available');
+
+    expect(coordinator.getState()).toMatchObject({ phase: 'not-available', version: undefined, releaseNotes: undefined });
   });
 
   it('只注册页面所需的更新控制通道', async () => {
@@ -153,12 +190,11 @@ describe('startAutoUpdater', () => {
     }
   });
 
-  it('keeps the upgrade-success state when the automatic post-restart check fails', async () => {
+  it('更新成功后不立即启动下一次检查', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'doudian-updater-test-'));
     const settingsPath = join(directory, 'settings.json');
     writeFileSync(settingsPath, JSON.stringify({ pendingVersion: '0.1.2' }));
     const autoUpdater = createUpdater();
-    autoUpdater.checkForUpdates.mockRejectedValue(new Error('update feed unavailable'));
     try {
       const coordinator = startAutoUpdater({
         app: { isPackaged: true, getVersion: () => '0.1.2' }, autoUpdater, settingsPath, log: { error: vi.fn() }
@@ -167,7 +203,7 @@ describe('startAutoUpdater', () => {
       await new Promise(setImmediate);
 
       expect(coordinator.getState()).toMatchObject({ phase: 'idle', justUpdated: true });
-      expect(coordinator.getState()).toMatchObject({ error: undefined });
+      expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
@@ -175,10 +211,16 @@ describe('startAutoUpdater', () => {
 
   it('lets the user cancel a download without showing an error', async () => {
     const autoUpdater = createUpdater();
+    let checks = 0;
+    autoUpdater.checkForUpdates = vi.fn(async () => {
+      checks += 1;
+      if (checks === 2) autoUpdater.emit('update-available', { version: '0.1.9' });
+    });
     autoUpdater.downloadUpdate = vi.fn((token) => token.createPromise(() => {}));
     const coordinator = startAutoUpdater({
       app: { isPackaged: true, getVersion: () => '0.1.8' }, autoUpdater, log: { error: vi.fn() }
     });
+    await new Promise(setImmediate);
     autoUpdater.emit('update-available', { version: '0.1.9' });
 
     const downloading = coordinator.download();

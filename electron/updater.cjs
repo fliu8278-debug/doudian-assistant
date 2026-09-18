@@ -15,6 +15,7 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
     ...(justUpdated ? { justUpdated: true, releaseNotes: plainReleaseNotes(settings.pendingReleaseNotes), version: currentVersion } : {})
   };
   let downloadToken;
+  let suppressBackgroundDownload = false;
   const publish = (next) => {
     state = { ...state, ...next };
     broadcast(state);
@@ -22,7 +23,7 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
   };
   const check = async () => {
     if (!app.isPackaged) return state;
-    publish({ phase: 'checking', error: undefined });
+    publish({ phase: 'checking', error: undefined, justUpdated: undefined });
     try {
       await autoUpdater.checkForUpdates();
     } catch (error) {
@@ -33,8 +34,17 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
     }
     return state;
   };
-  const download = async () => {
+  const download = async (refresh = true) => {
     if (!app.isPackaged || state.phase !== 'available') return state;
+    if (refresh) {
+      suppressBackgroundDownload = true;
+      try {
+        await check();
+      } finally {
+        suppressBackgroundDownload = false;
+      }
+      if (state.phase !== 'available') return state;
+    }
     downloadToken = new CancellationToken();
     publish({ phase: 'downloading', error: undefined, percent: 0 });
     try {
@@ -81,7 +91,7 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
   autoUpdater.on('checking-for-update', () => publish({ phase: 'checking', error: undefined }));
   autoUpdater.on('update-available', (info) => {
     if (settings.skippedVersion === info.version) {
-      publish({ phase: 'not-available', error: undefined });
+      publish({ phase: 'not-available', version: undefined, releaseNotes: undefined, releaseUrl: undefined, error: undefined });
       return;
     }
     publish({
@@ -90,9 +100,18 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
       releaseNotes: plainReleaseNotes(info.releaseNotes),
       releaseUrl
     });
-    if (state.backgroundEnabled) void download();
+    if (state.backgroundEnabled && !suppressBackgroundDownload) void download(false);
   });
-  autoUpdater.on('update-not-available', () => publish({ phase: 'not-available' }));
+  autoUpdater.on('update-not-available', () => publish({
+    phase: 'not-available',
+    version: undefined,
+    releaseNotes: undefined,
+    releaseUrl: undefined,
+    percent: undefined,
+    transferred: undefined,
+    total: undefined,
+    error: undefined
+  }));
   autoUpdater.on('download-progress', (progress) => publish({
     phase: 'downloading',
     percent: Math.round(progress.percent),
@@ -115,7 +134,7 @@ function startAutoUpdater({ app, autoUpdater, broadcast = () => {}, log = consol
     log.error('更新失败', error);
     publish({ phase: 'error', error: '更新失败，请稍后重试。' });
   });
-  void check();
+  if (!justUpdated) void check();
 
   return { cancelDownload, check, download, getState: () => state, openRelease, restart, setBackground, skip };
 }

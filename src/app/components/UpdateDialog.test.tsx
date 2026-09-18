@@ -3,6 +3,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { UpdateDialog } from './UpdateDialog';
 
 describe('UpdateDialog', () => {
+  it('在检查更新时不把当前版本伪装成新版本', () => {
+    const markup = renderToStaticMarkup(<UpdateDialog
+      onCheck={vi.fn()} onDownload={vi.fn()} onOpenRelease={vi.fn()} onRestart={vi.fn()}
+      state={{ phase: 'checking', currentVersion: '0.1.11' }}
+    />);
+
+    expect(markup).toContain('正在检查更新');
+    expect(markup).toContain('正在检查最新版本');
+    expect(markup).not.toContain('发现新版本');
+  });
+
   it('uses an inline SVG for the update icon instead of a font glyph', () => {
     const markup = renderToStaticMarkup(<UpdateDialog
       onCheck={vi.fn()} onDownload={vi.fn()} onOpenRelease={vi.fn()} onRestart={vi.fn()}
@@ -110,6 +121,17 @@ describe('UpdateDialog', () => {
     expect(markup).toContain('我知道了');
     expect(markup).toContain('data-icon="confirm"');
     expect(markup).not.toContain('✓ 我知道了');
+  });
+
+  it('更新成功视图不混入下一次下载状态', () => {
+    const markup = renderToStaticMarkup(<UpdateDialog
+      onCheck={vi.fn()} onDownload={vi.fn()} onOpenRelease={vi.fn()} onRestart={vi.fn()}
+      state={{ phase: 'downloading', currentVersion: '0.1.8', version: '0.1.12', justUpdated: true, percent: 63 }}
+    />);
+
+    expect(markup).toContain('更新已完成，当前版本 v0.1.8');
+    expect(markup).toContain('我知道了');
+    expect(markup).not.toContain('下载中… 63%');
   });
 
   it('reserves “我知道了” for the successful update view', () => {

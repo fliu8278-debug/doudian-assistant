@@ -12,14 +12,19 @@ type Props = {
 };
 
 export function UpdateDialog({ state, onCheck, onClose, onDownload, onCancelDownload, onOpenRelease, onRestart, onSkip }: Props) {
-  const targetVersion = state.version ?? state.currentVersion;
-  const percent = Math.max(0, Math.min(100, Math.round(state.percent ?? 0)));
   const isSuccess = Boolean(state.justUpdated);
-  const isReady = state.phase === 'ready';
-  const isDownloading = state.phase === 'downloading';
-  const title = isSuccess ? '🎉 更新成功！' : state.phase === 'error' ? '更新失败' : '发现新版本';
+  const isChecking = state.phase === 'checking' && !isSuccess;
+  const targetVersion = isSuccess ? state.currentVersion : state.version;
+  const percent = Math.max(0, Math.min(100, Math.round(state.percent ?? 0)));
+  const isReady = !isSuccess && state.phase === 'ready';
+  const isDownloading = !isSuccess && state.phase === 'downloading';
+  const title = isSuccess ? '🎉 更新成功！' : isChecking ? '正在检查更新' : state.phase === 'error' ? '更新失败' : '发现新版本';
   const summary = isSuccess
     ? `更新已完成，当前版本 v${state.currentVersion}`
+    : isChecking
+      ? '正在检查最新版本…'
+      : state.phase === 'not-available'
+        ? `当前版本 v${state.currentVersion}，暂无可用更新。`
     : `当前版本 v${state.currentVersion}，新版本已可用。`;
   const notes = state.releaseNotes || '本次更新包含体验优化与问题修复，更新不会影响本地数据。';
 
@@ -30,7 +35,7 @@ export function UpdateDialog({ state, onCheck, onClose, onDownload, onCancelDown
         <button aria-label="关闭更新窗口" className="updateDialogClose" onClick={onClose} type="button"><UpdateActionIcon name="close" /></button>
       </header>
       <div className="updateDialogBody">
-        <div className="updateDialogVersion">v{targetVersion}</div>
+        <div className="updateDialogVersion">{targetVersion ? `v${targetVersion}` : '正在检查最新版本…'}</div>
         <p className="updateDialogSummary">{summary}</p>
         {isReady ? <p className="updateReadyNotice"><UpdateActionIcon name="confirm" /><strong>v{targetVersion} 已就绪，重启后生效。</strong></p> : null}
         {isDownloading ? <section aria-label={`下载进度 ${percent}%`} aria-live="polite" className="updateProgress">
