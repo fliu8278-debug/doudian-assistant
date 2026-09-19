@@ -134,23 +134,47 @@ async function applySearchAfterViewFilters(page: Page) {
 }
 
 async function findTargetVideo(page: Page, expectedSku?: string) {
-  const rows = await page.locator('tr, [role="row"], [class*="table-row"], [class*="TableRow"]').all();
-  for (const row of rows) {
-    if (!(await row.innerText()).includes('待配置')) continue;
-    if (!await row.getByRole('button', { name: '立即配置', exact: true }).count()) continue;
-    const text = await row.innerText();
-    const sku = extractSearchAfterViewSku(text);
-    const videoId = text.match(/ID\s*(\d{10,})/)?.[1];
-    if (videoId && sku && (!expectedSku || sku === expectedSku || text.includes(expectedSku))) return row;
+  const candidates: string[] = [];
+  for (let pageNumber = 1; pageNumber <= 100; pageNumber += 1) {
+    const rows = await page.locator('tr, [role="row"], [class*="table-row"], [class*="TableRow"]').all();
+    for (const row of rows) {
+      const text = await row.innerText();
+      if (!text.includes('待配置')) continue;
+      if (!await row.getByRole('button', { name: '立即配置', exact: true }).count()) continue;
+      const sku = extractSearchAfterViewSku(text);
+      const videoId = text.match(/ID\s*(\d{10,})/)?.[1];
+      if (videoId && sku && (!expectedSku || sku === expectedSku || text.includes(expectedSku))) return row;
+      candidates.push(text.replace(/\s+/g, ' ').slice(0, 160));
+    }
+    if (!await goToNextSearchAfterViewPage(page)) break;
   }
-  const candidates = (await page.locator('body').innerText().catch(() => ''))
-    .split(/\n+/)
-    .map((text) => text.trim())
-    .filter((text) => text.includes('待配置') || (expectedSku ? text.includes(expectedSku) : false))
-    .slice(0, 8);
   throw new Error(expectedSku
-    ? `没有找到款号 ${expectedSku} 的待配置视频；候选文字：${candidates.join(' | ')}`
-    : `没有找到待配置且带款号的视频；候选文字：${candidates.join(' | ')}`);
+    ? `翻完页面仍没有找到款号 ${expectedSku} 的待配置视频；候选文字：${candidates.slice(0, 8).join(' | ')}`
+    : `翻完页面仍没有找到待配置且带款号的视频；候选文字：${candidates.slice(0, 8).join(' | ')}`);
+}
+
+async function goToNextSearchAfterViewPage(page: Page) {
+  const selectors = [
+    'button[aria-label*="下一页"]:visible',
+    '[role="button"][aria-label*="下一页"]:visible',
+    'button[class*="pagination-next"]:visible',
+    '[class*="pagination"] button:visible'
+  ];
+  for (const selector of selectors) {
+    const buttons = await page.locator(selector).all();
+    for (const button of buttons) {
+      if (!await button.isVisible().catch(() => false)) continue;
+      if (await button.isDisabled().catch(() => false)) return false;
+      const className = await button.getAttribute('class').catch(() => '') ?? '';
+      if (/disabled/i.test(className)) return false;
+      const label = `${await button.innerText().catch(() => '')}${await button.getAttribute('aria-label').catch(() => '') ?? ''}`;
+      if (!/下一页|›|>|next/i.test(label)) continue;
+      await button.click();
+      await page.waitForTimeout(500);
+      return true;
+    }
+  }
+  return false;
 }
 
 async function selectVisibleFilterOption(page: Page, pattern: RegExp) {
