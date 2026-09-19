@@ -96,15 +96,18 @@ export async function configureSearchAfterViewPage(
 }
 
 async function applySearchAfterViewFilters(page: Page) {
-  await page.getByText('待配置', { exact: true }).first().click();
+  await page.getByText('配置状态', { exact: true }).waitFor({ state: 'visible', timeout: 45_000 });
+  await page.locator('div[class*="tagList_"] div[class*="tagItem_"]:visible')
+    .filter({ hasText: /^待配置$/ })
+    .click({ force: true });
   await page.locator('label').filter({ hasText: '近30天' }).last().click();
 
   const author = page.locator('input#_auto__author_id');
   if (await author.count()) {
     const selected = await author.locator('xpath=../..').textContent();
     if (!selected?.includes('全部自营账号')) {
-      await author.click();
-      await page.locator('.ecom-select-item-option').filter({ hasText: '全部自营账号' }).click();
+      await author.locator('xpath=../..').click();
+      await page.locator('.ecom-select-item-option:visible').filter({ hasText: /^全部自营账号$/ }).click();
     }
   }
 
@@ -112,8 +115,8 @@ async function applySearchAfterViewFilters(page: Page) {
   if (await trailer.count()) {
     const selected = await trailer.locator('xpath=../..').textContent();
     if (!selected?.includes('全部')) {
-      await trailer.click();
-      await page.locator('.ecom-select-item-option').filter({ hasText: /^全部$/ }).click();
+      await trailer.locator('xpath=../..').click();
+      await page.locator('.ecom-select-item-option:visible').filter({ hasText: /^全部$/ }).click();
     }
   }
 
