@@ -144,10 +144,12 @@ async function selectSearchAfterViewProducts(page: Page, sku: string) {
   await search.fill(sku);
   await search.press('Enter');
 
-  const rows = await page.locator('tr').filter({ hasText: sku }).all();
+  const rows = await page.locator('tr, [role="row"], .ecom-mcenter-table-row, [class*="table-row"]')
+    .filter({ hasText: sku })
+    .all();
   const products: SearchAfterViewProduct[] = [];
   for (const row of rows) {
-    const checkbox = row.getByRole('checkbox').first();
+    const checkbox = row.locator('input[type="checkbox"], [role="checkbox"], [class*="checkbox"], [class*="Checkbox"]').first();
     if (!await checkbox.count()) continue;
     const text = await row.innerText();
     const id = text.match(/ID\s*(\d{10,})/)?.[1];
