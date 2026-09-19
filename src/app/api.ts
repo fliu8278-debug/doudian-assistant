@@ -152,6 +152,15 @@ export async function getVideoFrameExtraction(jobId: string) {
   return readJson<VideoFrameExtractionJob>(response);
 }
 
+export async function startSearchAfterView(input: { shopId: string; keywords: string[] }) {
+  const response = await fetch('/api/search-after-view', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...input, autoSubmit: true })
+  });
+  return readJson<{ submitted: boolean; videoId: string; sku: string; productIds: string[]; mainProductId: string | null }>(response);
+}
+
 async function readJson<T>(response: Response) {
   const text = (await response.text()).trim();
   const body = text ? parseJson(text) : null;

@@ -171,8 +171,13 @@ describe('应用侧边栏', () => {
     expect(markup).toContain('斯凯奇纵云');
     expect(markup).toContain('斯凯奇速锋');
     expect(markup).toContain('斯凯奇男鞋');
-    expect(markup).toContain('国补');
-    expect(markup).toContain('主推品');
+    expect(markup).toContain('自动选择全部承接商品');
+    expect(markup).toContain('国补商品自动保留');
+    expect(markup).toContain('点击开始后将直接打开已登录浏览器自动配置');
+    expect(markup).toContain('开始自动配置');
+    expect(markup).not.toContain('承接商品示例：4 个商品');
+    expect(markup).not.toContain('211085');
+    expect(markup).not.toContain('搜索商品 ID/名称');
     expect(markup).toContain('当前执行');
     expect(markup).toContain('未开始');
   });

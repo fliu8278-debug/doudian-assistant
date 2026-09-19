@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createProductCouponBatch, createVideoFrameExtraction, deleteShop, getVideoFrameExtraction } from './api';
+import { createProductCouponBatch, createVideoFrameExtraction, deleteShop, getVideoFrameExtraction, startSearchAfterView } from './api';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -55,5 +55,19 @@ describe('product coupon API', () => {
     await createProductCouponBatch({ shopId: 'shop-1', fileName: '商品券.xlsx', rows: [], concurrency: 1 });
 
     expect(fetchMock).toHaveBeenCalledWith('/api/product-coupon-batches', expect.objectContaining({ method: 'POST' }));
+  });
+});
+
+describe('search-after-view API', () => {
+  it('starts automatic configuration with the selected shop and keywords', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ submitted: true, videoId: 'video-1', sku: '232619', productIds: [], mainProductId: null })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await startSearchAfterView({ shopId: 'shop-1', keywords: ['斯凯奇男鞋', '一脚蹬鞋'] });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/search-after-view', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ shopId: 'shop-1', keywords: ['斯凯奇男鞋', '一脚蹬鞋'], autoSubmit: true })
+    }));
   });
 });
