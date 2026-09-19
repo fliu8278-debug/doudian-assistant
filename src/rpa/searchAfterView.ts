@@ -1,8 +1,5 @@
-import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
 import type { Locator, Page } from 'playwright';
 import type { ShopAuthStorage } from '../db/shops';
-import { appDataPath } from '../paths';
 import { openDoudianShopPage } from './doudianSession';
 
 export const DOUDIAN_SEARCH_AFTER_VIEW_URL = 'https://fxg.jinritemai.com/ffa/mcompass/search';
@@ -64,7 +61,6 @@ export async function submitSearchAfterViewTask(
     await page.close();
     return { ...result, submitted: true };
   } catch (caught) {
-    await saveFailureScreenshot(page, draft.sku ?? 'next');
     throw caught;
   }
 }
@@ -204,13 +200,4 @@ async function bottomVisibleButton(page: Page, name: string) {
 
 async function isDoudianLoginPage(page: Page) {
   return page.url().includes('/login/') || (await page.title()).includes('登录');
-}
-
-async function saveFailureScreenshot(page: Page, sku: string) {
-  const dir = appDataPath('screenshots');
-  mkdirSync(dir, { recursive: true });
-  await page.screenshot({
-    path: join(dir, `search-after-view-${sku}-failed-${Date.now()}.png`),
-    fullPage: true
-  }).catch(() => undefined);
 }
