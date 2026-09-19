@@ -78,7 +78,11 @@ shopsRouter.post('/shops/:id/sync', async (request, response) => {
 shopsRouter.post('/shops/:id/open-login', async (request, response) => {
   try {
     const profile = getShopAuthStorage(db, request.params.id);
-    const result = await openDoudianShopWindow(profile);
+    const requestedUrl = String(request.body?.url ?? '').trim();
+    const url = requestedUrl.startsWith('https://fxg.jinritemai.com/')
+      ? requestedUrl
+      : undefined;
+    const result = await openDoudianShopWindow(profile, url);
     response.json(result);
   } catch (caught) {
     response.status(500).json({ error: caught instanceof Error ? caught.message : '打开抖店失败' });

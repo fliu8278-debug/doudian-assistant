@@ -140,12 +140,58 @@ button:disabled {
   gap: 3px;
 }
 
+.sidebarNavGroupToggle {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 27px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+
+.sidebarNavGroupToggle:hover {
+  background: #edf4fb;
+}
+
 .sidebarNavLabel {
   padding: 0 10px 4px;
   color: #8291a4;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+.sidebarNavGroupToggle .sidebarNavLabel {
+  flex: 1;
+}
+
+.sidebarNavChevron {
+  width: 15px;
+  height: 15px;
+  margin-right: 9px;
+  color: #8291a4;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  transition: transform 140ms ease;
+}
+
+.sidebarNavGroupToggle[aria-expanded="false"] .sidebarNavChevron {
+  transform: rotate(-90deg);
+}
+
+.sidebarNavChildren {
+  display: grid;
+  gap: 3px;
+  padding-left: 7px;
+}
+
+.sidebarNavChildren[hidden] {
+  display: none;
 }
 
 .sidebarNavItem {
@@ -164,6 +210,10 @@ button:disabled {
   font-weight: 500;
   line-height: 1.35;
   text-align: left;
+}
+
+.sidebarNavChild {
+  padding-left: 12px;
 }
 
 .sidebarNavItem:hover {
@@ -2255,6 +2305,413 @@ button:disabled {
   font-size: 13px;
 }
 
+.searchAfterViewPage {
+  gap: 20px;
+}
+
+.searchAfterViewHeader {
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.searchAfterViewHeaderActions,
+.searchAfterViewFilterActions,
+.searchAfterViewProductTools,
+.searchAfterViewKeywordInput {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.searchAfterViewHeaderActions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 48%;
+  padding-top: 2px;
+}
+
+.searchAfterViewHeaderActions .workspaceHint {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.searchAfterViewFilters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
+  gap: 14px 16px;
+  align-items: end;
+  padding: 16px;
+}
+
+.searchAfterViewFilterActions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+.searchAfterViewFilters label {
+  display: grid;
+  gap: 6px;
+  color: #61738a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.searchAfterViewFilters select,
+.searchAfterViewProductTools input,
+.searchAfterViewKeywordInput input {
+  min-height: 36px;
+  border: 1px solid #d6e0eb;
+  border-radius: 9px;
+  background: #fff;
+  color: #21364f;
+  padding: 0 10px;
+  font: inherit;
+  font-weight: 400;
+}
+
+.searchAfterViewPreset,
+.searchAfterViewSectionTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.searchAfterViewPreset {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  padding: 16px;
+}
+
+.searchAfterViewPreset > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: min(100%, 420px);
+}
+
+.searchAfterViewPreset > div:first-child small {
+  color: #71829a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.searchAfterViewPresetEditor {
+  display: grid;
+  gap: 10px;
+  min-width: min(100%, 420px);
+}
+
+.searchAfterViewPreset .searchAfterViewKeywordTags button {
+  min-width: 118px;
+  justify-content: center;
+  border-radius: 10px;
+  border-color: #c7d9ee;
+  background: #fff;
+  box-shadow: 0 2px 7px rgba(52, 78, 108, 0.05);
+}
+
+.searchAfterViewPreset strong,
+.searchAfterViewSectionTitle h3 {
+  margin: 0;
+  color: #21364f;
+  font-size: 15px;
+}
+
+.searchAfterViewPreset span,
+.searchAfterViewSectionTitle > span,
+.searchAfterViewDrawerSection p {
+  color: #71829a;
+  font-size: 12px;
+}
+
+.searchAfterViewKeywordTags {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.searchAfterViewKeywordTags span,
+.searchAfterViewKeywordTags button {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #cfe0f7;
+  border-radius: 999px;
+  background: #f1f6ff;
+  color: #2864ad;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.searchAfterViewPreset .searchAfterViewKeywordTags span {
+  min-width: 118px;
+  justify-content: center;
+  border-radius: 10px;
+  border-color: #c7d9ee;
+  background: #fff;
+  box-shadow: 0 2px 7px rgba(52, 78, 108, 0.05);
+}
+
+.searchAfterViewKeywordTags button {
+  cursor: pointer;
+}
+
+.searchAfterViewKeywordTags.active button {
+  border-color: #a7c8f5;
+  background: #eef5ff;
+}
+
+.searchAfterViewWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+.searchAfterViewMain {
+  min-width: 0;
+  min-height: 390px;
+  padding: 18px;
+}
+
+.searchAfterViewMainHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2eaf3;
+}
+
+.searchAfterViewMainHeader > div {
+  display: grid;
+  gap: 5px;
+}
+
+.searchAfterViewMainHeader h2 {
+  margin: 0;
+  color: #21364f;
+  font-size: 16px;
+}
+
+.searchAfterViewMainHeader p {
+  margin: 0;
+  color: #71829a;
+  font-size: 12px;
+}
+
+.searchAfterViewMain .searchAfterViewPreset {
+  padding: 18px 0;
+  border: 0;
+  border-bottom: 1px solid #e2eaf3;
+  border-radius: 0;
+  background: transparent;
+}
+
+.searchAfterViewQueue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+}
+
+.searchAfterViewWorkspace .searchAfterViewExecution {
+  padding: 18px;
+  border-left: 1px solid #d9e2ec;
+  border-top: 1px solid #d9e2ec;
+}
+
+.searchAfterViewExecution .runPanelHeader {
+  margin-bottom: 14px;
+}
+
+.searchAfterViewQueue > div {
+  display: grid;
+  gap: 7px;
+}
+
+.searchAfterViewQueue h2 {
+  margin: 0;
+  color: #21364f;
+  font-size: 16px;
+}
+
+.searchAfterViewQueue p {
+  margin: 0;
+  color: #71829a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.searchAfterViewBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(31, 45, 61, 0.26);
+}
+
+.searchAfterViewDrawer {
+  width: min(570px, 100%);
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: #f8fbff;
+  box-shadow: -20px 0 60px rgba(34, 56, 82, 0.2);
+}
+
+.searchAfterViewDrawerHeader,
+.searchAfterViewDrawerFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #dfe8f1;
+  background: #fff;
+}
+
+.searchAfterViewDrawerHeader > div {
+  display: grid;
+  gap: 4px;
+}
+
+.searchAfterViewDrawerHeader span {
+  color: #6d7f94;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.searchAfterViewDrawerHeader h2 {
+  margin: 0;
+  color: #1e3550;
+  font-size: 19px;
+}
+
+.iconButton {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d7e1ec;
+  border-radius: 9px;
+  background: #fff;
+  color: #61738a;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.searchAfterViewDrawerBody {
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 18px 20px;
+}
+
+.searchAfterViewVideoSummary,
+.searchAfterViewDrawerSection {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #dce6f0;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.searchAfterViewVideoSummary strong {
+  color: #21364f;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.searchAfterViewVideoSummary span {
+  color: #71829a;
+  font-size: 12px;
+}
+
+.searchAfterViewProductTools input,
+.searchAfterViewKeywordInput input {
+  flex: 1;
+  min-width: 0;
+}
+
+.searchAfterViewProductList {
+  display: grid;
+  gap: 8px;
+}
+
+.searchAfterViewProduct {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #e0e8f1;
+  border-radius: 10px;
+  background: #fbfdff;
+}
+
+.searchAfterViewProduct > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.searchAfterViewProduct strong {
+  overflow: hidden;
+  color: #30465e;
+  font-size: 12px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.searchAfterViewProduct small {
+  color: #8796a8;
+  font-size: 11px;
+}
+
+.searchAfterViewProduct em,
+.mainProductBadge {
+  border-radius: 999px;
+  background: #fff0e6;
+  color: #b35913;
+  padding: 4px 7px;
+  font-size: 11px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.mainProductBadge {
+  background: #e8f2ff;
+  color: #1769e0;
+}
+
+.searchAfterViewDrawerSection p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.searchAfterViewDrawerFooter {
+  justify-content: flex-end;
+  border-top: 1px solid #dfe8f1;
+  border-bottom: 0;
+}
+
+.toastMessage button {
+  margin-left: 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .safeNote {
   background: #fff7e8;
   color: #8a5a10;
@@ -2782,6 +3239,13 @@ td:last-child {
   }
 }
 
+/* Keep the workbench readable when the sidebar leaves less room than the viewport suggests. */
+@media (max-width: 1400px) and (min-width: 981px) {
+  .searchAfterViewFilters {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
 @media (max-width: 1240px) {
   .videoFrameMain {
     height: auto;
@@ -2809,6 +3273,14 @@ td:last-child {
 
   .couponGrid {
     grid-template-columns: 1fr;
+  }
+
+  .searchAfterViewFilters {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+
+  .searchAfterViewFilterActions {
+    grid-column: 1 / -1;
   }
 
   .runPanel {
@@ -2870,6 +3342,23 @@ td:last-child {
   .timeFields,
   .couponGrid {
     grid-template-columns: 1fr;
+  }
+
+  .searchAfterViewFilters {
+    grid-template-columns: 1fr;
+  }
+
+  .searchAfterViewWorkspace {
+    grid-template-columns: 1fr;
+  }
+
+  .searchAfterViewQueue {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .searchAfterViewFilterActions {
+    grid-column: auto;
   }
 
   .shopRowsHeader {

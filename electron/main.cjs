@@ -8,6 +8,7 @@ const { registerAutoUpdaterIpc, startAutoUpdater } = require('./updater.cjs');
 let mainWindow;
 let backendServer;
 let updater;
+let shuttingDown = false;
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -26,8 +27,17 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  if (shuttingDown) return;
+  event.preventDefault();
+  shuttingDown = true;
   backendServer?.close();
+  try {
+    const { closeDoudianShopContexts } = require(path.join(__dirname, '..', 'build', 'server', 'index.cjs'));
+    Promise.resolve(closeDoudianShopContexts()).finally(() => app.quit());
+  } catch {
+    app.quit();
+  }
 });
 
 app.on('activate', () => {

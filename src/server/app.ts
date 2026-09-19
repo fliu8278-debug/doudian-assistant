@@ -11,6 +11,7 @@ import { searchAfterViewRouter } from './routes/searchAfterView';
 import { shopsRouter } from './routes/shops';
 import { createVideoFrameExtractionRouter } from './routes/videoFrameExtraction';
 import { VideoFrameExtractionManager } from './videoFrameExtraction';
+export { closeDoudianShopContexts } from '../rpa/doudianSession';
 
 export type StartedServer = {
   server: Server;

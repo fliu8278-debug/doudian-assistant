@@ -54,7 +54,13 @@ export async function openDoudianShopPage(
     : findReusablePage(context.pages(), url) ?? await context.newPage();
   await page.bringToFront();
   if (!isSamePage(page.url(), url)) {
-    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+    } catch (error) {
+      // The shop app may abort an in-flight navigation while replacing the SPA document.
+      // Keep the same persistent page and let the caller inspect the settled DOM.
+      if (!page.url().includes(new URL(url).host)) throw error;
+    }
   }
   return { page, reused: hadContext };
 }
@@ -142,6 +148,14 @@ export async function closeDoudianShopPages(profile: BrowserProfile, urlPart: st
   const pages = context.pages().filter((page) => page.url().includes(urlPart));
   await Promise.all(pages.map((page) => page.close().catch(() => undefined)));
   return pages.length;
+}
+
+export async function closeDoudianShopContexts() {
+  const contexts = [...activeContexts.entries()];
+  await Promise.all(contexts.map(async ([shopId, context]) => {
+    const binding = activeContextBindings.get(shopId);
+    if (binding) await closeContext(context, binding);
+  }));
 }
 
 async function closeContext(context: BrowserContext, binding: ContextBinding) {

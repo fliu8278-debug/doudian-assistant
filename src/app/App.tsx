@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import * as XLSX from 'xlsx';
 import type { CouponBatch, CouponRow, NewcomerGiftBatch, NewcomerGiftRow, Shop } from '../shared/types';
 import { normalizeCouponRow, validateCouponBatchTime, validateCouponRow } from '../imports/couponRows';
@@ -6,6 +6,7 @@ import { normalizeNewcomerGiftRow, validateNewcomerGiftRow } from '../imports/ne
 import { createCouponBatch, createNewcomerGiftBatch, createProductCouponBatch, createVideoFrameExtraction, getCouponBatch, getNewcomerGiftBatch, getProductCouponBatch, getShops, getVideoFrameExtraction, stopCouponBatch, stopNewcomerGiftBatch, stopProductCouponBatch } from './api';
 import { UpdateDialog } from './components/UpdateDialog';
 import { ShopList } from './pages/shops/ShopList';
+import { SearchAfterViewWorkbench } from './pages/search-after-view/SearchAfterViewWorkbench';
 import { updateActionLabel, useUpdater, type UpdateState } from './updater';
 import { runVideoFrameBatch, type VideoFrameBatchTask } from './videoFrameBatch';
 
@@ -17,11 +18,52 @@ type Page =
   | 'nationalSubsidyCoupon'
   | 'newcomerGift'
   | 'productSearch'
+  | 'searchAfterView'
   | 'titleCheck'
   | 'videoFrameExtraction'
   | 'tableTemplates'
   | 'executionRecords'
   | 'settings';
+export type NavGroupName = 'shops' | 'marketing' | 'products' | 'video';
+export type SidebarGroupState = Record<NavGroupName, boolean>;
+
+const SIDEBAR_GROUP_STORAGE_KEY = 'doudian-sidebar-groups';
+const DEFAULT_SIDEBAR_GROUPS: SidebarGroupState = { shops: true, marketing: true, products: true, video: true };
+const PAGE_GROUPS: Partial<Record<Page, NavGroupName>> = {
+  shops: 'shops',
+  accountStatus: 'shops',
+  coupon: 'marketing',
+  productCoupon: 'marketing',
+  nationalSubsidyCoupon: 'marketing',
+  newcomerGift: 'marketing',
+  productSearch: 'products',
+  searchAfterView: 'products',
+  titleCheck: 'products',
+  videoFrameExtraction: 'video'
+};
+
+export function ensurePageGroupExpanded(groups: SidebarGroupState, page: Page): SidebarGroupState {
+  const group = PAGE_GROUPS[page];
+  return group && !groups[group] ? { ...groups, [group]: true } : groups;
+}
+
+function readSidebarGroups(): SidebarGroupState {
+  if (typeof window === 'undefined') return DEFAULT_SIDEBAR_GROUPS;
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(SIDEBAR_GROUP_STORAGE_KEY) ?? 'null') as Partial<SidebarGroupState> | null;
+    return stored ? { ...DEFAULT_SIDEBAR_GROUPS, ...Object.fromEntries(Object.keys(DEFAULT_SIDEBAR_GROUPS).map((group) => [group, stored[group as NavGroupName] !== false])) } as SidebarGroupState : DEFAULT_SIDEBAR_GROUPS;
+  } catch {
+    return DEFAULT_SIDEBAR_GROUPS;
+  }
+}
+
+function writeSidebarGroups(groups: SidebarGroupState) {
+  try {
+    window.localStorage.setItem(SIDEBAR_GROUP_STORAGE_KEY, JSON.stringify(groups));
+  } catch {
+    // Local storage can be unavailable in restricted browser contexts.
+  }
+}
 type RawImportRow = Record<string, string>;
 type CouponPreviewRow = {
   rowNumber: number;
@@ -38,6 +80,7 @@ type NewcomerGiftPreviewRow = {
 
 export function App() {
   const [page, setPage] = useState<Page>('shops');
+  const [expandedGroups, setExpandedGroups] = useState<SidebarGroupState>(() => readSidebarGroups());
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshingShops, setRefreshingShops] = useState(false);
@@ -83,6 +126,21 @@ export function App() {
       void updater.check();
     }
   };
+  const navigate = (nextPage: Page) => {
+    setPage(nextPage);
+    setExpandedGroups((previous) => {
+      const next = ensurePageGroupExpanded(previous, nextPage);
+      if (next !== previous) writeSidebarGroups(next);
+      return next;
+    });
+  };
+  const toggleGroup = (group: NavGroupName) => {
+    setExpandedGroups((previous) => {
+      const next = { ...previous, [group]: !previous[group] };
+      writeSidebarGroups(next);
+      return next;
+    });
+  };
 
   return (
     <div className="app-shell">
@@ -100,33 +158,30 @@ export function App() {
         </button>
 
         <nav className="sidebarNav" aria-label="主导航">
-          <div className="sidebarNavGroup">
-            <span className="sidebarNavLabel">店铺</span>
-            <button className={navClass(page === 'shops', 'sidebarNavItem')} onClick={() => setPage('shops')} type="button"><NavIcon name="shop" />店铺列表</button>
-            <button className={navClass(page === 'accountStatus', 'sidebarNavItem')} onClick={() => setPage('accountStatus')} type="button"><NavIcon name="account" />账号状态</button>
-          </div>
-          <div className="sidebarNavGroup">
-            <span className="sidebarNavLabel">营销</span>
-            <button className={navClass(page === 'coupon', 'sidebarNavItem')} onClick={() => setPage('coupon')} type="button"><NavIcon name="fans" />涨粉券</button>
-            <button className={navClass(page === 'productCoupon', 'sidebarNavItem')} onClick={() => setPage('productCoupon')} type="button"><NavIcon name="tag" />商品优惠券</button>
-            <button className={navClass(page === 'nationalSubsidyCoupon', 'sidebarNavItem')} onClick={() => setPage('nationalSubsidyCoupon')} type="button"><NavIcon name="subsidy" />国补优惠券</button>
-            <button className={navClass(page === 'newcomerGift', 'sidebarNavItem')} onClick={() => setPage('newcomerGift')} type="button"><NavIcon name="gift" />新人礼金</button>
-          </div>
-          <div className="sidebarNavGroup">
-            <span className="sidebarNavLabel">商品</span>
-            <button className={navClass(page === 'productSearch', 'sidebarNavItem')} onClick={() => setPage('productSearch')} type="button"><NavIcon name="search" />商品搜索</button>
-            <button className={navClass(page === 'titleCheck', 'sidebarNavItem')} onClick={() => setPage('titleCheck')} type="button"><NavIcon name="list" />标题检查</button>
-          </div>
-          <div className="sidebarNavGroup">
-            <span className="sidebarNavLabel">视频</span>
-            <button className={navClass(page === 'videoFrameExtraction', 'sidebarNavItem')} onClick={() => setPage('videoFrameExtraction')} type="button"><NavIcon name="video" />视频抽帧</button>
-          </div>
+          <SidebarNavGroup expanded={expandedGroups.shops} group="shops" label="店铺" onToggle={toggleGroup}>
+            <button className={navClass(page === 'shops', 'sidebarNavItem sidebarNavChild')} onClick={() => navigate('shops')} type="button"><NavIcon name="shop" />店铺列表</button>
+            <button className={navClass(page === 'accountStatus', 'sidebarNavItem sidebarNavChild')} onClick={() => navigate('accountStatus')} type="button"><NavIcon name="account" />账号状态</button>
+          </SidebarNavGroup>
+          <SidebarNavGroup expanded={expandedGroups.marketing} group="marketing" label="营销" onToggle={toggleGroup}>
+            <button className={navClass(page === 'coupon', 'sidebarNavItem sidebarNavChild')} onClick={() => navigate('coupon')} type="button"><NavIcon name="fans" />涨粉券</button>
+            <button className={navClass(page === 'productCoupon', 'sidebarNavItem sidebarNavChild')} onClick={() => navigate('productCoupon')} type="button"><NavIcon name="tag" />商品优惠券</button>
+            <button className={navClass(page === 'nationalSubsidyCoupon', 'sidebarNavItem sidebarNavChild')} onClick={() => navigate('nationalSubsidyCoupon')} type="button"><NavIcon name="subsidy" />国补优惠券</button>
+            <button className={navClass(page === 'newcomerGift', 'sidebarNavItem sidebarNavChild')} onClick={() => navigate('newcomerGift')} type="button"><NavIcon name="gift" />新人礼金</button>
+          </SidebarNavGroup>
+          <SidebarNavGroup expanded={expandedGroups.products} group="products" label="商品" onToggle={toggleGroup}>
+            <button className={navClass(page === 'productSearch', 'sidebarNavItem sidebarNavChild')} onClick={() => navigate('productSearch')} type="button"><NavIcon name="search" />商品搜索</button>
+            <button className={navClass(page === 'searchAfterView', 'sidebarNavItem sidebarNavChild')} onClick={() => navigate('searchAfterView')} type="button"><NavIcon name="searchAfterView" />看后搜配置</button>
+            <button className={navClass(page === 'titleCheck', 'sidebarNavItem sidebarNavChild')} onClick={() => navigate('titleCheck')} type="button"><NavIcon name="list" />标题检查</button>
+          </SidebarNavGroup>
+          <SidebarNavGroup expanded={expandedGroups.video} group="video" label="视频" onToggle={toggleGroup}>
+            <button className={navClass(page === 'videoFrameExtraction', 'sidebarNavItem sidebarNavChild')} onClick={() => navigate('videoFrameExtraction')} type="button"><NavIcon name="video" />视频抽帧</button>
+          </SidebarNavGroup>
         </nav>
 
         <div className="sidebarFooter">
-          <button className={navClass(page === 'tableTemplates', 'sidebarNavItem')} onClick={() => setPage('tableTemplates')} type="button"><NavIcon name="table" />表格模板</button>
-          <button className={navClass(page === 'executionRecords', 'sidebarNavItem')} onClick={() => setPage('executionRecords')} type="button"><NavIcon name="history" />执行记录</button>
-          <button className={navClass(page === 'settings', 'sidebarNavItem')} onClick={() => setPage('settings')} type="button"><NavIcon name="tuning" />设置</button>
+          <button className={navClass(page === 'tableTemplates', 'sidebarNavItem')} onClick={() => navigate('tableTemplates')} type="button"><NavIcon name="table" />表格模板</button>
+          <button className={navClass(page === 'executionRecords', 'sidebarNavItem')} onClick={() => navigate('executionRecords')} type="button"><NavIcon name="history" />执行记录</button>
+          <button className={navClass(page === 'settings', 'sidebarNavItem')} onClick={() => navigate('settings')} type="button"><NavIcon name="tuning" />设置</button>
         </div>
       </aside>
 
@@ -172,6 +227,8 @@ export function App() {
             summary={[{ label: '今日搜索', value: '0' }, { label: '可查看商品', value: '0' }, { label: '当前店铺', value: currentShop ? '已选择' : '未选择' }]}
             title="商品搜索"
           />
+        ) : page === 'searchAfterView' ? (
+          <SearchAfterViewWorkbench currentShop={currentShop} shops={shops} />
         ) : page === 'titleCheck' ? (
           <WorkspacePlaceholder
             actionLabel="检查标题"
@@ -476,7 +533,19 @@ function navClass(active: boolean, base = 'navItem') {
   return active ? `${base} active` : base;
 }
 
-type NavIconName = 'account' | 'coupon' | 'fans' | 'gift' | 'history' | 'list' | 'refresh' | 'search' | 'shop' | 'subsidy' | 'table' | 'tag' | 'tuning' | 'video';
+function SidebarNavGroup({ group, label, expanded, onToggle, children }: { group: NavGroupName; label: string; expanded: boolean; onToggle(group: NavGroupName): void; children: ReactNode }) {
+  return (
+    <div className="sidebarNavGroup">
+      <button aria-controls={`sidebar-group-${group}`} aria-expanded={expanded} className="sidebarNavGroupToggle" data-group={group} onClick={() => onToggle(group)} type="button">
+        <span className="sidebarNavLabel">{label}</span>
+        <svg aria-hidden="true" className="sidebarNavChevron" fill="none" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5" /></svg>
+      </button>
+      <div className="sidebarNavChildren" hidden={!expanded} id={`sidebar-group-${group}`}>{children}</div>
+    </div>
+  );
+}
+
+type NavIconName = 'account' | 'coupon' | 'fans' | 'gift' | 'history' | 'list' | 'refresh' | 'search' | 'searchAfterView' | 'shop' | 'subsidy' | 'table' | 'tag' | 'tuning' | 'video';
 
 function NavIcon({ name }: { name: NavIconName }) {
   const paths: Record<NavIconName, string[]> = {
@@ -488,6 +557,7 @@ function NavIcon({ name }: { name: NavIconName }) {
     list: ['M8 6h11', 'M8 12h11', 'M8 18h11', 'M4.5 6h.01', 'M4.5 12h.01', 'M4.5 18h.01'],
     refresh: ['M19 8a7 7 0 1 0 1 5', 'M19 4v4h-4'],
     search: ['m20 20-4.5-4.5', 'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Z'],
+    searchAfterView: ['M4 5h16v14H4z', 'm9 9 6 3-6 3Z'],
     shop: ['M4 10V6l2-3h12l2 3v4', 'M5 10h14v10H5z', 'M9 20v-6h6v6', 'M4 6h16'],
     subsidy: ['M12 3l7 3v5c0 4-3 7-7 10-4-3-7-6-7-10V6l7-3Z', 'M9 12h6', 'M12 9v6'],
     table: ['M4 5h16v14H4z', 'M4 10h16', 'M10 5v14'],

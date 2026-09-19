@@ -96,18 +96,26 @@ export async function configureSearchAfterViewPage(
 }
 
 async function applySearchAfterViewFilters(page: Page) {
-  await page.getByText('配置状态', { exact: true }).waitFor({ state: 'visible', timeout: 45_000 });
-  await page.locator('div[class*="tagList_"] div[class*="tagItem_"]:visible')
-    .filter({ hasText: /^待配置$/ })
-    .click({ force: true });
-  await page.locator('label').filter({ hasText: '近30天' }).last().click();
+  try {
+    await page.getByText('配置状态', { exact: true }).waitFor({ state: 'visible', timeout: 45_000 });
+  } catch (error) {
+    const body = await page.locator('body').innerText().catch(() => '');
+    const context = body.replace(/\s+/g, ' ').slice(0, 240);
+    throw new Error(`看后搜页面未加载：${page.url()}；标题：${await page.title().catch(() => '')}；页面文字：${context}`, { cause: error });
+  }
+  const pendingFilter = page.locator('div[class*="tagList_"] div[class*="tagItem_"]:visible')
+    .filter({ hasText: /^待配置(?:\s|$)/ });
+  await pendingFilter.click({ force: true });
+  const thirtyDayFilter = page.locator('label.ecom-radio-button-wrapper:visible').filter({ hasText: '近30天' }).last();
+  await thirtyDayFilter.click({ force: true });
 
   const author = page.locator('input#_auto__author_id');
   if (await author.count()) {
     const selected = await author.locator('xpath=../..').textContent();
     if (!selected?.includes('全部自营账号')) {
       await author.locator('xpath=../..').click();
-      await page.locator('.ecom-select-item-option:visible').filter({ hasText: /^全部自营账号$/ }).click();
+      await selectVisibleFilterOption(page, /^全部自营账号$/);
+      await expectFilterValue(author, '全部自营账号');
     }
   }
 
@@ -116,7 +124,8 @@ async function applySearchAfterViewFilters(page: Page) {
     const selected = await trailer.locator('xpath=../..').textContent();
     if (!selected?.includes('全部')) {
       await trailer.locator('xpath=../..').click();
-      await page.locator('.ecom-select-item-option:visible').filter({ hasText: /^全部$/ }).click();
+      await selectVisibleFilterOption(page, /^全部$/);
+      await expectFilterValue(trailer, '全部');
     }
   }
 
@@ -125,16 +134,34 @@ async function applySearchAfterViewFilters(page: Page) {
 }
 
 async function findTargetVideo(page: Page, expectedSku?: string) {
-  const rows = await page.locator('tr').filter({ hasText: '待配置' }).all();
+  const rows = await page.locator('tr, [role="row"], [class*="table-row"], [class*="TableRow"]').all();
   for (const row of rows) {
+    if (!(await row.innerText()).includes('待配置')) continue;
     if (!await row.getByRole('button', { name: '立即配置', exact: true }).count()) continue;
     const text = await row.innerText();
     const sku = extractSearchAfterViewSku(text);
-    if (sku && (!expectedSku || sku === expectedSku)) return row;
+    const videoId = text.match(/ID\s*(\d{10,})/)?.[1];
+    if (videoId && sku && (!expectedSku || sku === expectedSku || text.includes(expectedSku))) return row;
   }
+  const candidates = (await page.locator('body').innerText().catch(() => ''))
+    .split(/\n+/)
+    .map((text) => text.trim())
+    .filter((text) => text.includes('待配置') || (expectedSku ? text.includes(expectedSku) : false))
+    .slice(0, 8);
   throw new Error(expectedSku
-    ? `没有找到款号 ${expectedSku} 的待配置视频`
-    : '没有找到待配置且带款号的视频');
+    ? `没有找到款号 ${expectedSku} 的待配置视频；候选文字：${candidates.join(' | ')}`
+    : `没有找到待配置且带款号的视频；候选文字：${candidates.join(' | ')}`);
+}
+
+async function selectVisibleFilterOption(page: Page, pattern: RegExp) {
+  const option = page.locator('.ecom-select-item-option:visible').filter({ hasText: pattern }).last();
+  await option.waitFor({ state: 'visible' });
+  await option.click();
+}
+
+async function expectFilterValue(input: Locator, expected: string) {
+  const value = await input.locator('xpath=../..').textContent();
+  if (!value?.includes(expected)) throw new Error(`筛选条件未生效：期望「${expected}」，实际为「${value?.trim() ?? ''}」`);
 }
 
 async function selectSearchAfterViewProducts(page: Page, sku: string) {
@@ -144,20 +171,35 @@ async function selectSearchAfterViewProducts(page: Page, sku: string) {
   await search.fill(sku);
   await search.press('Enter');
 
-  const rows = await page.locator('tr, [role="row"], .ecom-mcenter-table-row, [class*="table-row"]')
-    .filter({ hasText: sku })
-    .all();
   const products: SearchAfterViewProduct[] = [];
-  for (const row of rows) {
-    const checkbox = row.locator('input[type="checkbox"], [role="checkbox"], [class*="checkbox"], [class*="Checkbox"]').first();
-    if (!await checkbox.count()) continue;
-    const text = await row.innerText();
-    const id = text.match(/ID\s*(\d{10,})/)?.[1];
-    if (!id) continue;
-    await checkbox.check().catch(() => checkbox.click());
-    products.push({ id, title: text });
+  const ids = [...new Set((await page.locator('body').innerText()).match(/ID\s*(\d{10,})/g) ?? [])]
+    .map((value) => value.replace(/\D/g, ''));
+  const controls = await page.locator('input[type="checkbox"], [role="checkbox"], [aria-checked], [class*="checkbox"], [class*="Checkbox"]').all();
+  for (const id of ids) {
+    for (const control of controls) {
+      const container = control.locator('xpath=ancestor::*[contains(., "ID ' + id + '")][1]');
+      if (!await container.count()) continue;
+      const text = await container.innerText().catch(() => '');
+      if (!text.includes(id)) continue;
+      await control.check().catch(() => control.click());
+      products.push({ id, title: text });
+      break;
+    }
   }
-  if (products.length === 0) throw new Error(`商品搜索结果没有可选链接：${sku}`);
+  if (products.length === 0) {
+    const candidateRows = await page.locator('tr, [role="row"], .ecom-mcenter-table-row, [class*="table-row"]')
+      .filter({ hasText: /ID\s*\d{10,}/ })
+      .all();
+    const rowTexts = await Promise.all(candidateRows.slice(0, 4).map(async (row) => {
+      const text = (await row.innerText()).replace(/\s+/g, ' ').slice(0, 300);
+      const inputs = await row.locator('input[type="checkbox"]').count();
+      const roles = await row.locator('[role="checkbox"]').count();
+      const aria = await row.locator('[aria-checked]').count();
+      const classes = await row.locator('[class*="checkbox"], [class*="Checkbox"]').count();
+      return `${text} [input=${inputs},role=${roles},aria=${aria},class=${classes}]`;
+    }));
+    throw new Error(`商品搜索结果没有可选链接：${sku}；候选行 ${rowTexts.length} 条：${rowTexts.join(' | ')}`);
+  }
   return products;
 }
 
@@ -185,6 +227,7 @@ async function fillSearchAfterViewKeywords(page: Page, keywords: string[]) {
       throw new Error(`看后搜词未写入：${keyword}`);
     }
   }
+  await page.locator('div.ecom-input-tag').last().click();
 }
 
 async function bottomVisibleButton(page: Page, name: string) {

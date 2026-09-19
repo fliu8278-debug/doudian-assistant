@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import * as AppModule from './App';
-import { App, CouponWorkbench, ProductCouponWorkbench, resolveVideoFramePreviewTask, resolveVideoFrameQueueProgress, VideoFrameRateWorkbench } from './App';
+import { App, CouponWorkbench, ProductCouponWorkbench, ensurePageGroupExpanded, resolveVideoFramePreviewTask, resolveVideoFrameQueueProgress, VideoFrameRateWorkbench } from './App';
+import { SearchAfterViewWorkbench } from './pages/search-after-view/SearchAfterViewWorkbench';
 import { scheduleShopToastDismissal, ShopList } from './pages/shops/ShopList';
 import type { VideoFrameBatchTask } from './videoFrameBatch';
 
@@ -104,11 +105,11 @@ describe('应用侧边栏', () => {
     expect(resolveVideoFrameQueueProgress({ file: new File(['a'], 'video.mp4'), status: 'failed' })).toEqual({ label: '失败', value: 100 });
   });
 
-  it('uses a flat sidebar navigation instead of collapsible groups', () => {
+  it('uses collapsible groups for sidebar navigation', () => {
     const markup = renderToStaticMarkup(<App />);
 
     expect(markup).toContain('sidebarNav');
-    expect(markup).not.toContain('navGroupToggle');
+    expect(markup).toContain('sidebarNavGroupToggle');
   });
 
   it('renders a Cockpit-style update action and settings card', () => {
@@ -125,6 +126,55 @@ describe('应用侧边栏', () => {
 
     expect(markup).toContain('shopDashboardGrid');
     expect(markup).toContain('shopQuickTools');
+  });
+
+  it('renders collapsible first-level groups around second-level navigation', () => {
+    const markup = renderToStaticMarkup(<App />);
+
+    expect(markup).toContain('sidebarNavGroupToggle');
+    expect(markup).toContain('data-group="marketing"');
+    expect(markup).toContain('aria-expanded="true"');
+    expect(markup).toContain('sidebarNavChildren');
+  });
+
+  it('opens the parent group when navigating to a child page', () => {
+    expect(ensurePageGroupExpanded({ shops: false, marketing: false, products: true, video: false }, 'productCoupon')).toEqual({
+      shops: false,
+      marketing: true,
+      products: true,
+      video: false
+    });
+  });
+
+  it('renders the 看后搜配置 entry and expands 商品 for its page', () => {
+    const markup = renderToStaticMarkup(<App />);
+
+    expect(markup).toContain('看后搜配置');
+    expect(ensurePageGroupExpanded({ shops: true, marketing: true, products: false, video: true }, 'searchAfterView')).toEqual({
+      shops: true,
+      marketing: true,
+      products: true,
+      video: true
+    });
+  });
+
+  it('renders the search-after-view workbench', () => {
+    const markup = renderToStaticMarkup(<SearchAfterViewWorkbench />);
+
+    expect(markup).toContain('看后搜配置');
+    expect(markup).toContain('全部自营账号');
+    expect(markup).toContain('是否挂车');
+    expect(markup).toContain('准备配置');
+    expect(markup).toContain('开始配置');
+    expect(markup).not.toContain('视频配置列表');
+    expect(markup).not.toContain('不想穿得太运动选这双卡其套脚鞋');
+    expect(markup).toContain('斯凯奇纵云');
+    expect(markup).toContain('斯凯奇速锋');
+    expect(markup).toContain('斯凯奇男鞋');
+    expect(markup).toContain('国补');
+    expect(markup).toContain('主推品');
+    expect(markup).toContain('当前执行');
+    expect(markup).toContain('未开始');
   });
 
   it('offers a delete action for each shop row', () => {
