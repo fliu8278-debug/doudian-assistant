@@ -103,6 +103,7 @@ async function applySearchAfterViewFilters(page: Page) {
     const context = body.replace(/\s+/g, ' ').slice(0, 240);
     throw new Error(`看后搜页面未加载：${page.url()}；标题：${await page.title().catch(() => '')}；页面文字：${context}`, { cause: error });
   }
+  await page.getByText('配置状态', { exact: true }).scrollIntoViewIfNeeded();
   const pendingFilter = page.locator('div[class*="tagList_"] div[class*="tagItem_"]:visible')
     .filter({ hasText: /^待配置(?:\s|$)/ });
   await pendingFilter.click({ force: true });
@@ -130,7 +131,9 @@ async function applySearchAfterViewFilters(page: Page) {
   }
 
   await page.getByRole('button', { name: '查询', exact: true }).click();
-  await page.getByRole('button', { name: '立即配置', exact: true }).first().waitFor({ state: 'visible' });
+  const firstConfigureButton = page.getByRole('button', { name: '立即配置', exact: true }).first();
+  await firstConfigureButton.waitFor({ state: 'visible' });
+  await firstConfigureButton.scrollIntoViewIfNeeded();
 }
 
 async function findTargetVideo(page: Page, expectedSku?: string) {
