@@ -6,6 +6,13 @@ export type SearchAfterViewStatus = '待配置' | '审核中' | '已完成';
 
 const DEFAULT_KEYWORDS = ['斯凯奇纵云', '斯凯奇速锋', '斯凯奇男鞋'];
 
+export function formatSearchAfterViewError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  const firstLine = message.split(/\r?\n/)[0].trim();
+  return firstLine || '自动配置失败，请稍后重试';
+}
+
+
 export function SearchAfterViewWorkbench({ currentShop, shops = [] }: { currentShop?: Shop; shops?: Shop[] }) {
   const [selectedShopId, setSelectedShopId] = useState(currentShop?.id ?? '');
   const [defaultKeywords, setDefaultKeywords] = useState(DEFAULT_KEYWORDS);
@@ -34,7 +41,7 @@ export function SearchAfterViewWorkbench({ currentShop, shops = [] }: { currentS
       const result = await startSearchAfterView({ shopId, keywords: defaultKeywords });
       setNotice(`${result.sku || '下一条视频'} 已提交，浏览器自动化完成`);
     } catch (caught) {
-      setNotice(caught instanceof Error ? caught.message : '自动配置失败');
+      setNotice(formatSearchAfterViewError(caught));
     } finally {
       setRunning(false);
     }

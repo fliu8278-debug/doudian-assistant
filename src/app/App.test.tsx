@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import * as AppModule from './App';
 import { App, CouponWorkbench, ProductCouponWorkbench, ensurePageGroupExpanded, resolveVideoFramePreviewTask, resolveVideoFrameQueueProgress, VideoFrameRateWorkbench } from './App';
-import { SearchAfterViewWorkbench } from './pages/search-after-view/SearchAfterViewWorkbench';
+import { formatSearchAfterViewError, SearchAfterViewWorkbench } from './pages/search-after-view/SearchAfterViewWorkbench';
 import { scheduleShopToastDismissal, ShopList } from './pages/shops/ShopList';
 import type { VideoFrameBatchTask } from './videoFrameBatch';
 
@@ -180,6 +180,10 @@ describe('应用侧边栏', () => {
     expect(markup).not.toContain('搜索商品 ID/名称');
     expect(markup).toContain('当前执行');
     expect(markup).toContain('未开始');
+  });
+
+  it('keeps Playwright call logs out of the user-facing automation error', () => {
+    expect(formatSearchAfterViewError(new Error('点击查询失败\nCall log:\n- waiting for element to be visible\n- retrying click action'))).toBe('点击查询失败');
   });
 
   it('offers a delete action for each shop row', () => {
