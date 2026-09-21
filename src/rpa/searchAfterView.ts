@@ -2,7 +2,7 @@ import type { Locator, Page } from 'playwright';
 import type { ShopAuthStorage } from '../db/shops';
 import { openDoudianShopPage } from './doudianSession';
 
-export const DOUDIAN_SEARCH_AFTER_VIEW_URL = 'https://fxg.jinritemai.com/ffa/mcompass/search';
+export const DOUDIAN_SEARCH_AFTER_VIEW_URL = 'https://fxg.jinritemai.com/ffa/mcompass/search/video';
 
 export type SearchAfterViewDraft = {
   shopId: string;
@@ -43,8 +43,7 @@ export async function submitSearchAfterViewTask(
   options: { autoSubmit?: boolean } = {}
 ): Promise<SearchAfterViewResult> {
   const { page } = await openDoudianShopPage(profile, DOUDIAN_SEARCH_AFTER_VIEW_URL, {
-    headless: false,
-    newPage: true
+    headless: false
   });
   page.setDefaultTimeout(15_000);
 
@@ -56,6 +55,7 @@ export async function submitSearchAfterViewTask(
     const result = await configureSearchAfterViewPage(page, draft);
     if (options.autoSubmit === false) return { ...result, submitted: false };
 
+    await page.waitForTimeout(3_000);
     await page.getByRole('button', { name: '立即提交', exact: true }).click();
     await page.getByRole('button', { name: '立即提交', exact: true }).waitFor({ state: 'hidden', timeout: 10_000 });
     await page.close();
@@ -131,7 +131,10 @@ async function applySearchAfterViewFilters(page: Page) {
   }
 
   await page.getByRole('button', { name: '查询', exact: true }).click();
-  const firstConfigureButton = page.getByRole('button', { name: '立即配置', exact: true }).first();
+  const firstConfigureButton = page.locator('tr.ecom-table-row:visible')
+    .filter({ hasText: '待配置' })
+    .getByRole('button', { name: '立即配置', exact: true })
+    .first();
   await firstConfigureButton.waitFor({ state: 'visible' });
   await firstConfigureButton.scrollIntoViewIfNeeded();
 }
@@ -139,7 +142,7 @@ async function applySearchAfterViewFilters(page: Page) {
 async function findTargetVideo(page: Page, expectedSku?: string) {
   const candidates: string[] = [];
   for (let pageNumber = 1; pageNumber <= 100; pageNumber += 1) {
-    const rows = await page.locator('tr, [role="row"], [class*="table-row"], [class*="TableRow"]').all();
+    const rows = await page.locator('tr.ecom-table-row:visible').all();
     for (const row of rows) {
       const text = await row.innerText();
       if (!text.includes('待配置')) continue;
@@ -157,27 +160,31 @@ async function findTargetVideo(page: Page, expectedSku?: string) {
 }
 
 async function goToNextSearchAfterViewPage(page: Page) {
-  const selectors = [
-    'button[aria-label*="下一页"]:visible',
-    '[role="button"][aria-label*="下一页"]:visible',
-    'button[class*="pagination-next"]:visible',
-    '[class*="pagination"] button:visible'
-  ];
-  for (const selector of selectors) {
-    const buttons = await page.locator(selector).all();
-    for (const button of buttons) {
-      if (!await button.isVisible().catch(() => false)) continue;
-      if (await button.isDisabled().catch(() => false)) return false;
-      const className = await button.getAttribute('class').catch(() => '') ?? '';
-      if (/disabled/i.test(className)) return false;
-      const label = `${await button.innerText().catch(() => '')}${await button.getAttribute('aria-label').catch(() => '') ?? ''}`;
-      if (!/下一页|›|>|next/i.test(label)) continue;
-      await button.click();
-      await page.waitForTimeout(500);
-      return true;
-    }
+  const next = page.locator('li.ecom-pagination-next:visible button').first();
+  if (!await next.count()) return false;
+  const parentClass = await next.locator('xpath=..').getAttribute('class').catch(() => '') ?? '';
+  const parentDisabled = await next.locator('xpath=..').getAttribute('aria-disabled').catch(() => '');
+  if (await next.isDisabled().catch(() => false) || /disabled/i.test(parentClass) || parentDisabled === 'true') return false;
+
+  const activePage = page.locator('li.ecom-pagination-item-active:visible').first();
+  const previousPage = await activePage.getAttribute('title').catch(() => null);
+  const firstRow = page.locator('tr.ecom-table-row:visible').first();
+  const previousRow = await firstRow.innerText().catch(() => '');
+  await next.click();
+  try {
+    await page.waitForFunction(
+      ({ previousPage, previousRow }) => {
+        const active = document.querySelector('li.ecom-pagination-item-active');
+        const row = document.querySelector('tr.ecom-table-row');
+        return active?.getAttribute('title') !== previousPage || row?.textContent?.trim() !== previousRow.trim();
+      },
+      { previousPage, previousRow },
+      { timeout: 10_000 }
+    );
+    return true;
+  } catch {
+    return false;
   }
-  return false;
 }
 
 async function selectVisibleFilterOption(page: Page, pattern: RegExp) {
@@ -199,24 +206,19 @@ async function selectSearchAfterViewProducts(page: Page, sku: string) {
   await search.press('Enter');
 
   const products: SearchAfterViewProduct[] = [];
-  const ids = [...new Set((await page.locator('body').innerText()).match(/ID\s*(\d{10,})/g) ?? [])]
-    .map((value) => value.replace(/\D/g, ''));
-  const controls = await page.locator('input[type="checkbox"], [role="checkbox"], [aria-checked], [class*="checkbox"], [class*="Checkbox"]').all();
-  for (const id of ids) {
-    for (const control of controls) {
-      const container = control.locator('xpath=ancestor::*[contains(., "ID ' + id + '")][1]');
-      if (!await container.count()) continue;
-      const text = await container.innerText().catch(() => '');
-      if (!text.includes(id)) continue;
-      await control.check().catch(() => control.click());
-      products.push({ id, title: text });
-      break;
-    }
+  const rows = page.locator('tr.ecom-table-row:visible')
+    .filter({ hasText: sku })
+    .filter({ has: page.locator('input.ecom-checkbox-input') });
+  await rows.first().waitFor({ state: 'visible' });
+  for (const row of await rows.all()) {
+    const checkbox = row.locator('input.ecom-checkbox-input').first();
+    if (!await checkbox.isChecked()) await checkbox.check({ force: true });
+    const text = await row.innerText();
+    const id = await row.getAttribute('data-row-key') ?? text.match(/ID\s*(\d{10,})/)?.[1];
+    if (id) products.push({ id, title: text });
   }
   if (products.length === 0) {
-    const candidateRows = await page.locator('tr, [role="row"], .ecom-mcenter-table-row, [class*="table-row"]')
-      .filter({ hasText: /ID\s*\d{10,}/ })
-      .all();
+    const candidateRows = await page.locator('tr.ecom-table-row:visible').filter({ hasText: sku }).all();
     const rowTexts = await Promise.all(candidateRows.slice(0, 4).map(async (row) => {
       const text = (await row.innerText()).replace(/\s+/g, ' ').slice(0, 300);
       const inputs = await row.locator('input[type="checkbox"]').count();
