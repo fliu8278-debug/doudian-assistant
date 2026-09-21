@@ -14,6 +14,16 @@ export type VideoFrameExtractionJob = {
   downloadUrl?: string;
 };
 
+export type SearchAfterViewTask = {
+  id: string;
+  shopId: string;
+  status: 'running' | 'paused' | 'complete' | 'failed';
+  configured: number;
+  errors: number;
+  currentSku: string | null;
+  message: string;
+};
+
 export async function getShops() {
   const response = await fetch('/api/shops');
   return readJson<Shop[]>(response);
@@ -158,7 +168,17 @@ export async function startSearchAfterView(input: { shopId: string; keywords: st
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...input, autoSubmit: true })
   });
-  return readJson<{ submitted: boolean; videoId: string; sku: string; productIds: string[]; mainProductId: string | null }>(response);
+  return readJson<SearchAfterViewTask>(response);
+}
+
+export async function getSearchAfterViewTask(taskId: string) {
+  const response = await fetch(`/api/search-after-view/${taskId}`);
+  return readJson<SearchAfterViewTask>(response);
+}
+
+export async function pauseSearchAfterViewTask(taskId: string) {
+  const response = await fetch(`/api/search-after-view/${taskId}/pause`, { method: 'POST' });
+  return readJson<SearchAfterViewTask>(response);
 }
 
 async function readJson<T>(response: Response) {

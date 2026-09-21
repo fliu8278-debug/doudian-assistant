@@ -175,6 +175,7 @@ describe('应用侧边栏', () => {
     expect(markup).toContain('国补商品自动保留');
     expect(markup).toContain('点击开始后将直接打开已登录浏览器自动配置');
     expect(markup).toContain('开始自动配置');
+    expect(markup).toContain('暂停任务');
     expect(markup).not.toContain('承接商品示例：4 个商品');
     expect(markup).not.toContain('211085');
     expect(markup).not.toContain('搜索商品 ID/名称');

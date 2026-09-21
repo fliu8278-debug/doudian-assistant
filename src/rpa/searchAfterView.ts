@@ -23,6 +23,17 @@ export type SearchAfterViewResult = {
   mainProductId: string | null;
 };
 
+export class SearchAfterViewTaskAbortedError extends Error {
+  constructor() {
+    super('看后搜任务已暂停');
+    this.name = 'SearchAfterViewTaskAbortedError';
+  }
+}
+
+export function isSearchAfterViewTaskAborted(error: unknown) {
+  return error instanceof SearchAfterViewTaskAbortedError;
+}
+
 export function extractSearchAfterViewSku(title: string) {
   return title.match(/(?:^|\s)(\d{6})-\d{1,3}(?:\s|$)/)?.[1] ?? null;
 }
@@ -40,39 +51,49 @@ export function chooseSearchAfterViewMainProduct(products: SearchAfterViewProduc
 export async function submitSearchAfterViewTask(
   profile: ShopAuthStorage,
   draft: SearchAfterViewDraft,
-  options: { autoSubmit?: boolean } = {}
-): Promise<SearchAfterViewResult> {
+  options: { autoSubmit?: boolean; signal?: AbortSignal } = {}
+): Promise<SearchAfterViewResult | null> {
+  throwIfSearchAfterViewTaskAborted(options.signal);
   const { page } = await openDoudianShopPage(profile, DOUDIAN_SEARCH_AFTER_VIEW_URL, {
     headless: false
   });
   page.setDefaultTimeout(15_000);
+  const returnToList = () => { void page.goto(DOUDIAN_SEARCH_AFTER_VIEW_URL, { waitUntil: 'domcontentloaded' }).catch(() => undefined); };
+  options.signal?.addEventListener('abort', returnToList, { once: true });
+  if (options.signal?.aborted) returnToList();
 
   try {
+    throwIfSearchAfterViewTaskAborted(options.signal);
     if (await isDoudianLoginPage(page)) {
       throw new Error('自动化浏览器未登录：请先在店铺浏览器完成登录并保存登录状态');
     }
 
     const result = await configureSearchAfterViewPage(page, draft);
+    if (!result) return null;
     if (options.autoSubmit === false) return { ...result, submitted: false };
 
     await page.waitForTimeout(3_000);
+    throwIfSearchAfterViewTaskAborted(options.signal);
     await page.getByRole('button', { name: '立即提交', exact: true }).click();
     await page.getByRole('button', { name: '立即提交', exact: true }).waitFor({ state: 'hidden', timeout: 10_000 });
-    await page.close();
     return { ...result, submitted: true };
   } catch (caught) {
+    if (options.signal?.aborted) throw new SearchAfterViewTaskAbortedError();
     throw caught;
+  } finally {
+    options.signal?.removeEventListener('abort', returnToList);
   }
 }
 
 export async function configureSearchAfterViewPage(
   page: Page,
   input: Pick<SearchAfterViewDraft, 'keywords' | 'sku'>
-): Promise<Omit<SearchAfterViewResult, 'submitted'>> {
+): Promise<Omit<SearchAfterViewResult, 'submitted'> | null> {
   const keywords = validateSearchAfterViewKeywords(input.keywords);
   await applySearchAfterViewFilters(page);
 
   const target = await findTargetVideo(page, input.sku);
+  if (!target) return null;
   const videoText = await target.innerText();
   const videoId = videoText.match(/ID\s*(\d{10,})/)?.[1];
   const sku = input.sku ?? extractSearchAfterViewSku(videoText);
@@ -131,16 +152,12 @@ async function applySearchAfterViewFilters(page: Page) {
   }
 
   await page.getByRole('button', { name: '查询', exact: true }).click();
-  const firstConfigureButton = page.locator('tr.ecom-table-row:visible')
-    .filter({ hasText: '待配置' })
-    .getByRole('button', { name: '立即配置', exact: true })
-    .first();
-  await firstConfigureButton.waitFor({ state: 'visible' });
-  await firstConfigureButton.scrollIntoViewIfNeeded();
+  const firstRow = page.locator('tr.ecom-table-row:visible').first();
+  await firstRow.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => undefined);
+  if (await firstRow.isVisible().catch(() => false)) await firstRow.scrollIntoViewIfNeeded();
 }
 
-async function findTargetVideo(page: Page, expectedSku?: string) {
-  const candidates: string[] = [];
+async function findTargetVideo(page: Page, expectedSku?: string): Promise<Locator | null> {
   for (let pageNumber = 1; pageNumber <= 100; pageNumber += 1) {
     const rows = await page.locator('tr.ecom-table-row:visible').all();
     for (const row of rows) {
@@ -150,13 +167,10 @@ async function findTargetVideo(page: Page, expectedSku?: string) {
       const sku = extractSearchAfterViewSku(text);
       const videoId = text.match(/ID\s*(\d{10,})/)?.[1];
       if (videoId && sku && (!expectedSku || sku === expectedSku || text.includes(expectedSku))) return row;
-      candidates.push(text.replace(/\s+/g, ' ').slice(0, 160));
     }
     if (!await goToNextSearchAfterViewPage(page)) break;
   }
-  throw new Error(expectedSku
-    ? `翻完页面仍没有找到款号 ${expectedSku} 的待配置视频；候选文字：${candidates.slice(0, 8).join(' | ')}`
-    : `翻完页面仍没有找到待配置且带款号的视频；候选文字：${candidates.slice(0, 8).join(' | ')}`);
+  return null;
 }
 
 async function goToNextSearchAfterViewPage(page: Page) {
@@ -277,4 +291,8 @@ async function bottomVisibleButton(page: Page, name: string) {
 
 async function isDoudianLoginPage(page: Page) {
   return page.url().includes('/login/') || (await page.title()).includes('登录');
+}
+
+function throwIfSearchAfterViewTaskAborted(signal?: AbortSignal) {
+  if (signal?.aborted) throw new SearchAfterViewTaskAbortedError();
 }

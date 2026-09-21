@@ -2,25 +2,48 @@ import { Router } from 'express';
 import { getShopAuthStorage } from '../../db/shops';
 import { submitSearchAfterViewTask } from '../../rpa/searchAfterView';
 import { db } from '../db';
+import { SearchAfterViewQueue } from '../searchAfterViewQueue';
 
-export const searchAfterViewRouter = Router();
+const searchAfterViewQueue = new SearchAfterViewQueue(async (input, signal) => {
+  const profile = getShopAuthStorage(db, input.shopId);
+  return submitSearchAfterViewTask(profile, input, { autoSubmit: true, signal });
+});
 
-searchAfterViewRouter.post('/search-after-view', async (request, response) => {
+export function createSearchAfterViewRouter(queue = searchAfterViewQueue) {
+  const router = Router();
+
+  router.post('/search-after-view', (request, response) => {
   const shopId = String(request.body?.shopId ?? '').trim();
   const keywords = Array.isArray(request.body?.keywords) ? request.body.keywords : [];
   const sku = String(request.body?.sku ?? '').trim() || undefined;
-  const autoSubmit = request.body?.autoSubmit === true;
 
   if (!shopId) {
     response.status(400).json({ error: '请选择店铺' });
     return;
   }
 
-  try {
-    const profile = getShopAuthStorage(db, shopId);
-    const result = await submitSearchAfterViewTask(profile, { shopId, keywords, sku }, { autoSubmit });
-    response.json(result);
-  } catch (caught) {
-    response.status(500).json({ error: caught instanceof Error ? caught.message : '看后搜配置失败' });
-  }
-});
+    response.status(202).json(queue.start({ shopId, keywords, sku }));
+  });
+
+  router.get('/search-after-view/:id', (request, response) => {
+    const task = queue.get(request.params.id);
+    if (!task) {
+      response.status(404).json({ error: '看后搜任务不存在' });
+      return;
+    }
+    response.json(task);
+  });
+
+  router.post('/search-after-view/:id/pause', (request, response) => {
+    const task = queue.pause(request.params.id);
+    if (!task) {
+      response.status(404).json({ error: '看后搜任务不存在' });
+      return;
+    }
+    response.json(task);
+  });
+
+  return router;
+}
+
+export const searchAfterViewRouter = createSearchAfterViewRouter();

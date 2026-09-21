@@ -2317,7 +2317,8 @@ button:disabled {
 .searchAfterViewHeaderActions,
 .searchAfterViewFilterActions,
 .searchAfterViewProductTools,
-.searchAfterViewKeywordInput {
+.searchAfterViewKeywordInput,
+.searchAfterViewMainActions {
   display: flex;
   align-items: center;
   gap: 8px;

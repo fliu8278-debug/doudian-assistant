@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createProductCouponBatch, createVideoFrameExtraction, deleteShop, getVideoFrameExtraction, startSearchAfterView } from './api';
+import { createProductCouponBatch, createVideoFrameExtraction, deleteShop, getSearchAfterViewTask, getVideoFrameExtraction, pauseSearchAfterViewTask, startSearchAfterView } from './api';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -69,5 +69,18 @@ describe('search-after-view API', () => {
       method: 'POST',
       body: JSON.stringify({ shopId: 'shop-1', keywords: ['斯凯奇男鞋', '一脚蹬鞋'], autoSubmit: true })
     }));
+  });
+
+  it('queries and pauses a running automatic configuration task', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'task-1', status: 'running' })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'task-1', status: 'paused' })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await getSearchAfterViewTask('task-1');
+    await pauseSearchAfterViewTask('task-1');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/search-after-view/task-1');
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/search-after-view/task-1/pause', { method: 'POST' });
   });
 });

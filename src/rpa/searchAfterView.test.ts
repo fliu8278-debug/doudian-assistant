@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   chooseSearchAfterViewMainProduct,
   extractSearchAfterViewSku,
+  isSearchAfterViewTaskAborted,
+  SearchAfterViewTaskAbortedError,
   validateSearchAfterViewKeywords
 } from './searchAfterView';
 
@@ -36,5 +38,12 @@ describe('看后搜承接商品规则', () => {
     expect(chooseSearchAfterViewMainProduct([
       { id: 'subsidy', title: '【国补】斯凯奇男鞋216704' }
     ])).toBeNull();
+  });
+});
+
+describe('看后搜任务暂停', () => {
+  it('将中断错误识别为用户暂停，而不是配置失败', () => {
+    expect(isSearchAfterViewTaskAborted(new SearchAfterViewTaskAbortedError())).toBe(true);
+    expect(isSearchAfterViewTaskAborted(new Error('页面未加载'))).toBe(false);
   });
 });
