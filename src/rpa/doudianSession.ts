@@ -66,8 +66,12 @@ export async function openDoudianShopPage(
 }
 
 async function closeExtraBlankPages(context: BrowserContext) {
+  const hasUsablePage = context.pages().some((page) => page.url() !== 'about:blank');
   const blankPages = context.pages().filter((page) => page.url() === 'about:blank');
-  await Promise.all(blankPages.slice(1).map((page) => page.close().catch(() => undefined)));
+  // Keep one blank page only when it is the sole page and can be navigated.
+  // If a real shop page already exists, every blank tab is stray state.
+  const keepCount = hasUsablePage ? 0 : 1;
+  await Promise.all(blankPages.slice(keepCount).map((page) => page.close().catch(() => undefined)));
 }
 
 function findReusablePage(pages: Page[], url: string) {

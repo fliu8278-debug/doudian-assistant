@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { SearchAfterViewResult } from '../rpa/searchAfterView';
+import { SearchAfterViewRowError, type SearchAfterViewResult } from '../rpa/searchAfterView';
 
 export type SearchAfterViewTaskStatus = 'running' | 'paused' | 'complete' | 'failed';
 
@@ -17,6 +17,7 @@ export type SearchAfterViewTaskInput = {
   shopId: string;
   keywords: string[];
   sku?: string;
+  skippedVideoIds?: string[];
 };
 
 type Entry = {
@@ -26,11 +27,16 @@ type Entry = {
 };
 
 export class SearchAfterViewQueue {
+  private activeTaskByShop = new Map<string, string>();
   private entries = new Map<string, Entry>();
 
   constructor(private readonly runOne: (input: SearchAfterViewTaskInput, signal: AbortSignal) => Promise<SearchAfterViewResult | null>) {}
 
   start(input: SearchAfterViewTaskInput) {
+    const activeTaskId = this.activeTaskByShop.get(input.shopId);
+    const activeTask = activeTaskId ? this.entries.get(activeTaskId)?.task : undefined;
+    if (activeTask?.status === 'running') return this.copy(activeTask);
+
     const controller = new AbortController();
     const task: SearchAfterViewTask = {
       id: randomUUID(),
@@ -42,8 +48,9 @@ export class SearchAfterViewQueue {
       message: '正在配置下一条视频'
     };
     const entry: Entry = { controller, task, done: Promise.resolve() };
-    entry.done = this.run(entry, input);
     this.entries.set(task.id, entry);
+    this.activeTaskByShop.set(task.shopId, task.id);
+    entry.done = this.run(entry, input);
     return this.copy(task);
   }
 
@@ -52,13 +59,12 @@ export class SearchAfterViewQueue {
     return task ? this.copy(task) : null;
   }
 
-  pause(taskId: string) {
+  async pause(taskId: string) {
     const entry = this.entries.get(taskId);
     if (!entry) return null;
     if (entry.task.status === 'running') {
-      entry.task.status = 'paused';
-      entry.task.message = '任务已暂停，当前条未提交';
       entry.controller.abort();
+      await entry.done;
     }
     return this.copy(entry.task);
   }
@@ -69,19 +75,35 @@ export class SearchAfterViewQueue {
   }
 
   private async run(entry: Entry, input: SearchAfterViewTaskInput) {
+    const skippedVideoIds = [...(input.skippedVideoIds ?? [])];
     try {
       while (!entry.controller.signal.aborted) {
-        const result = await this.runOne(input, entry.controller.signal);
+        let result: SearchAfterViewResult | null;
+        try {
+          result = await this.runOne({ ...input, skippedVideoIds: [...skippedVideoIds] }, entry.controller.signal);
+        } catch (caught) {
+          if (entry.controller.signal.aborted) break;
+          if (caught instanceof SearchAfterViewRowError) {
+            entry.task.errors += 1;
+            if (!skippedVideoIds.includes(caught.videoId)) skippedVideoIds.push(caught.videoId);
+            entry.task.message = `视频 ${caught.videoId} 配置失败：${caught.message}；已跳过并继续下一条`;
+            continue;
+          }
+          throw caught;
+        }
         if (entry.controller.signal.aborted) break;
         if (!result) {
           entry.task.status = 'complete';
           entry.task.message = entry.task.configured ? '没有更多待配置视频' : '没有找到可配置视频';
           return;
         }
+        if (!skippedVideoIds.includes(result.videoId)) skippedVideoIds.push(result.videoId);
         entry.task.configured += 1;
         entry.task.currentSku = result.sku;
         entry.task.message = `${result.sku} 已提交，继续配置下一条`;
       }
+      entry.task.status = 'paused';
+      entry.task.message = '任务已暂停，当前条未提交';
     } catch (caught) {
       if (!entry.controller.signal.aborted) {
         entry.task.status = 'failed';
@@ -89,9 +111,11 @@ export class SearchAfterViewQueue {
         entry.task.message = caught instanceof Error ? caught.message : '看后搜配置失败';
         return;
       }
+      entry.task.status = 'paused';
+      entry.task.message = '任务已暂停，当前条未提交';
+    } finally {
+      if (this.activeTaskByShop.get(entry.task.shopId) === entry.task.id) this.activeTaskByShop.delete(entry.task.shopId);
     }
-    entry.task.status = 'paused';
-    entry.task.message = '任务已暂停，当前条未提交';
   }
 
   private copy(task: SearchAfterViewTask): SearchAfterViewTask {

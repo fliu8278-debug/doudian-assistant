@@ -34,8 +34,8 @@ export function createSearchAfterViewRouter(queue = searchAfterViewQueue) {
     response.json(task);
   });
 
-  router.post('/search-after-view/:id/pause', (request, response) => {
-    const task = queue.pause(request.params.id);
+  router.post('/search-after-view/:id/pause', async (request, response) => {
+    const task = await queue.pause(request.params.id);
     if (!task) {
       response.status(404).json({ error: '看后搜任务不存在' });
       return;
