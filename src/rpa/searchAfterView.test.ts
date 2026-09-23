@@ -139,7 +139,7 @@ describe('看后搜任务暂停', () => {
     }, { signal: controller.signal })).rejects.toBeInstanceOf(SearchAfterViewTaskAbortedError);
 
     expect(openDoudianShopPage).toHaveBeenCalledWith(expect.anything(), DOUDIAN_SEARCH_AFTER_VIEW_URL, {
-      headless: true,
+      headless: false,
       newPage: false
     });
     expect(close).toHaveBeenCalledOnce();

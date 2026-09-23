@@ -156,9 +156,9 @@ export async function getSearchAfterViewTaskPage(profile: ShopAuthStorage, signa
   if (active && !active.page.isClosed()) return active.page;
 
   const { page } = await openDoudianShopPage(profile, DOUDIAN_SEARCH_AFTER_VIEW_URL, {
-    // This is a background automation task. Reuse the saved profile without
-    // opening a visible browser window or a user-facing blank tab.
-    headless: true,
+    // Show the saved shop browser while the task runs, then reuse this page
+    // for every row in the same task.
+    headless: false,
     newPage: false
   });
   // A new task always starts at the first list page; the same task keeps the
