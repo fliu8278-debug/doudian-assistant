@@ -126,7 +126,7 @@ export function runSearchAfterViewAbortable<T>(action: () => Promise<T>, signal?
 }
 
 export function extractSearchAfterViewSku(title: string) {
-  return title.match(/(?<!\d)(\d{6})(?:-\d{1,3})?(?!\d)/)?.[1] ?? null;
+  return title.match(/(?<!\d)(\d+)(?:-\d+)?(?!\d)/)?.[1] ?? null;
 }
 
 export function parseSearchAfterViewRowMetadata(title: string, rowText: string): SearchAfterViewCandidateRow {
@@ -204,6 +204,13 @@ export function validateSearchAfterViewKeywords(keywords: string[]) {
 
 export function chooseSearchAfterViewMainProduct(products: SearchAfterViewProduct[]) {
   return products.find((product) => !product.title.includes('国补'))?.id ?? null;
+}
+
+export function shouldSetSearchAfterViewMainProduct(
+  product: SearchAfterViewProduct,
+  currentMainProductId: string | null
+) {
+  return !currentMainProductId && !product.title.includes('国补');
 }
 
 export function isSearchAfterViewMainProductConfirmed(drawerText: string) {
@@ -399,9 +406,12 @@ export async function configureSearchAfterViewPage(
       throw new Error(`配置抽屉款号不一致：期望 ${sku}，实际 ${drawerSku ?? '未识别'}`);
     }
 
-    products = await selectSearchAfterViewProducts(page, sku);
-    mainProductId = chooseSearchAfterViewMainProduct(products);
-    if (mainProductId) await setMainProduct(page, mainProductId);
+    mainProductId = null;
+    products = await selectSearchAfterViewProducts(page, sku, async (product) => {
+      if (!shouldSetSearchAfterViewMainProduct(product, mainProductId)) return;
+      mainProductId = product.id;
+      await setMainProduct(page, product.id);
+    });
     await confirmSelectedProducts(page);
     await fillSearchAfterViewKeywords(page, keywords);
   } catch (caught) {
@@ -768,7 +778,11 @@ async function expectFilterValue(input: Locator, expected: string) {
   if (!value?.includes(expected)) throw new Error(`筛选条件未生效：期望「${expected}」，实际为「${value?.trim() ?? ''}」`);
 }
 
-async function selectSearchAfterViewProducts(page: Page, sku: string) {
+async function selectSearchAfterViewProducts(
+  page: Page,
+  sku: string,
+  onSelected?: (product: SearchAfterViewProduct) => Promise<void>
+) {
   await page.getByText(/添加承接商品/).last().click();
   const productDrawer = page.locator('div.auxo-drawer:visible').last();
   const search = productDrawer.getByPlaceholder('请输入商品ID/商品名称', { exact: true });
@@ -788,7 +802,11 @@ async function selectSearchAfterViewProducts(page: Page, sku: string) {
     if (!await checkbox.isChecked()) await checkbox.check({ force: true });
     const text = await row.innerText();
     const id = await row.getAttribute('data-row-key') ?? text.match(/ID\s*(\d{10,})/)?.[1];
-    if (id) products.push({ id, title: text });
+    if (id) {
+      const product = { id, title: text };
+      products.push(product);
+      await onSelected?.(product);
+    }
   }
   if (products.length === 0) {
     const candidateRows = await productDrawer.locator('tr.ecom-table-row:visible').filter({ hasText: sku }).all();

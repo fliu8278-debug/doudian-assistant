@@ -8,6 +8,7 @@ vi.mock('./doudianSession', () => ({ openDoudianShopPage }));
 
 import {
   chooseSearchAfterViewMainProduct,
+  shouldSetSearchAfterViewMainProduct,
   isSearchAfterViewMainProductConfirmed,
   waitForSearchAfterViewMainProductConfirmation,
   clickSearchAfterViewMainProductButton,
@@ -57,6 +58,12 @@ describe('看后搜配置输入规则', () => {
   it('从视频标题提取六码款号', () => {
     expect(extractSearchAfterViewSku('黑色网面鞋 232939-45')).toBe('232939');
     expect(extractSearchAfterViewSku('宽楦舒适男鞋 232619')).toBe('232619');
+  });
+
+  it('从视频标题提取任意位数款号并截断横杠后缀', () => {
+    expect(extractSearchAfterViewSku('新款鞋 1234-01')).toBe('1234');
+    expect(extractSearchAfterViewSku('新款鞋 1234567-01')).toBe('1234567');
+    expect(extractSearchAfterViewSku('新款鞋 12345678')).toBe('12345678');
   });
 
   it('忽略没有款号的视频标题', () => {
@@ -221,6 +228,12 @@ describe('看后搜承接商品规则', () => {
     expect(chooseSearchAfterViewMainProduct([
       { id: 'subsidy', title: '【国补】斯凯奇男鞋216704' }
     ])).toBeNull();
+  });
+
+  it('商品勾选完成后只为第一个非国补商品立即设置主推', () => {
+    expect(shouldSetSearchAfterViewMainProduct({ id: 'subsidy', title: '【国补】商品' }, null)).toBe(false);
+    expect(shouldSetSearchAfterViewMainProduct({ id: 'normal', title: '普通商品' }, null)).toBe(true);
+    expect(shouldSetSearchAfterViewMainProduct({ id: 'later', title: '另一个普通商品' }, 'normal')).toBe(false);
   });
 
   it('只有页面确认已设为主推后才算设置成功', () => {
