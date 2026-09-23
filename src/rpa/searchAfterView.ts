@@ -3,6 +3,9 @@ import type { ShopAuthStorage } from '../db/shops';
 import { openDoudianShopPage } from './doudianSession';
 
 export const DOUDIAN_SEARCH_AFTER_VIEW_URL = 'https://fxg.jinritemai.com/ffa/mcompass/search/video';
+const SEARCH_AFTER_VIEW_SETTLE_DELAY_MS = 750;
+const SEARCH_AFTER_VIEW_SKU_CHAR_DELAY_MS = 80;
+const SEARCH_AFTER_VIEW_MAIN_PRODUCT_POLL_DELAY_MS = 50;
 
 export type SearchAfterViewDraft = {
   shopId: string;
@@ -23,12 +26,30 @@ type SearchAfterViewVideoTarget = {
   videoId: string;
 };
 
+export type SearchAfterViewCandidateRow = {
+  title: string;
+  videoId: string | null;
+  pending: boolean;
+  hasConfigure: boolean;
+};
+
+export type SearchAfterViewCandidate = {
+  videoId: string;
+  sku: string;
+  title: string;
+};
+
 export type SearchAfterViewResult = {
   submitted: boolean;
   videoId: string;
   sku: string;
   productIds: string[];
   mainProductId: string | null;
+};
+
+export type SearchAfterViewTargetProgress = {
+  videoId: string;
+  sku: string;
 };
 
 type SearchAfterViewTaskPage = {
@@ -41,6 +62,7 @@ const taskPages = new WeakMap<AbortSignal, SearchAfterViewTaskPage>();
 // ponytail: keep one prepared list per automation page so the next item is
 // configured in-place instead of re-querying/restarting the list each time.
 const preparedSearchAfterViewPages = new WeakSet<Page>();
+const scannedSearchAfterViewPages = new WeakMap<Page, SearchAfterViewCandidate[]>();
 const WAIT_FOR_SEARCH_AFTER_VIEW_FIRST_ROW_CHANGE = String.raw`(previousRow) => {
   const visible = (element) => {
     const style = window.getComputedStyle(element);
@@ -107,6 +129,36 @@ export function extractSearchAfterViewSku(title: string) {
   return title.match(/(?<!\d)(\d{6})(?:-\d{1,3})?(?!\d)/)?.[1] ?? null;
 }
 
+export function parseSearchAfterViewRowMetadata(title: string, rowText: string): SearchAfterViewCandidateRow {
+  return {
+    title: (title.trim() || rowText).trim(),
+    videoId: rowText.match(/(?:短视频\s*)?ID\s*(\d{10,})/)?.[1] ?? null,
+    pending: rowText.includes('待配置'),
+    hasConfigure: rowText.includes('立即配置')
+  };
+}
+
+export function collectSearchAfterViewCandidates(rows: SearchAfterViewCandidateRow[]): SearchAfterViewCandidate[] {
+  return rows.flatMap(({ title, videoId, pending, hasConfigure }) => {
+    if (!pending || !hasConfigure || !videoId) return [];
+    const sku = extractSearchAfterViewSku(title);
+    if (!videoId || !sku) return [];
+    return [{ videoId, sku, title: title.trim() }];
+  });
+}
+
+export function findSearchAfterViewCandidateRowIndex(
+  rows: SearchAfterViewCandidateRow[],
+  candidate: SearchAfterViewCandidate
+) {
+  return rows.findIndex((row) => (
+    row.pending &&
+    row.hasConfigure &&
+    row.videoId === candidate.videoId &&
+    extractSearchAfterViewSku(row.title) === candidate.sku
+  ));
+}
+
 export function resolveSearchAfterViewTitleSku(title: string, expectedSku?: string) {
   const sku = extractSearchAfterViewSku(title);
   return sku && (!expectedSku || sku === expectedSku) ? sku : null;
@@ -120,6 +172,10 @@ export function isSearchAfterViewDrawerMatch(drawerText: string, videoId: string
 
 export function isSearchAfterViewVideoRowMatch(rowText: string, videoId: string) {
   return new RegExp(`(?:^|\\s)ID\\s*${videoId}(?:\\s|$)`).test(rowText);
+}
+
+export function isSearchAfterViewVideoTargetMatch(rowTitle: string, rowText: string, videoId: string, sku: string) {
+  return isSearchAfterViewVideoRowMatch(rowText, videoId) && extractSearchAfterViewSku(rowTitle) === sku;
 }
 
 export async function hasSearchAfterViewConfigureAction(row: Locator) {
@@ -150,10 +206,18 @@ export function chooseSearchAfterViewMainProduct(products: SearchAfterViewProduc
   return products.find((product) => !product.title.includes('国补'))?.id ?? null;
 }
 
+export function isSearchAfterViewMainProductConfirmed(drawerText: string) {
+  return drawerText.replace(/\s+/g, ' ').includes('已成功设为主推品');
+}
+
 export async function submitSearchAfterViewTask(
   profile: ShopAuthStorage,
   draft: SearchAfterViewDraft,
-  options: { autoSubmit?: boolean; signal?: AbortSignal } = {}
+  options: {
+    autoSubmit?: boolean;
+    signal?: AbortSignal;
+    onTarget?: (target: SearchAfterViewTargetProgress) => void;
+  } = {}
 ): Promise<SearchAfterViewResult | null> {
   throwIfSearchAfterViewTaskAborted(options.signal);
   const page = await getSearchAfterViewTaskPage(profile, options.signal);
@@ -165,7 +229,7 @@ export async function submitSearchAfterViewTask(
       throw new Error('自动化浏览器未登录：请先在店铺浏览器完成登录并保存登录状态');
     }
 
-    const result = await configureSearchAfterViewPage(page, draft);
+    const result = await configureSearchAfterViewPage(page, draft, { onTarget: options.onTarget });
     if (!result) {
       // A signal-backed queue keeps the same page between successful rows, but
       // the page is no longer needed once the list is exhausted.
@@ -174,11 +238,10 @@ export async function submitSearchAfterViewTask(
     }
     if (options.autoSubmit === false) return { ...result, submitted: false };
 
-    await runSearchAfterViewAbortable(() => page.waitForTimeout(3_000), options.signal);
     throwIfSearchAfterViewTaskAborted(options.signal);
-    await runSearchAfterViewAbortable(() => page.getByRole('button', { name: '立即提交', exact: true }).click(), options.signal);
-    await runSearchAfterViewAbortable(() => page.getByRole('button', { name: '立即提交', exact: true }).waitFor({ state: 'hidden', timeout: 10_000 }), options.signal);
-    await waitForSearchAfterViewList(page);
+    const submitButton = await bottomVisibleButton(page, '立即提交');
+    await runSearchAfterViewAbortable(() => submitButton.click(), options.signal);
+    await runSearchAfterViewAbortable(() => waitForSearchAfterViewSubmitCompletion(page), options.signal);
     return { ...result, submitted: true };
   } catch (caught) {
     if (options.signal?.aborted) {
@@ -206,6 +269,7 @@ export async function getSearchAfterViewTaskPage(profile: ShopAuthStorage, signa
   // A new task always starts at the first list page; the same task keeps the
   // current page while it advances row by row.
   preparedSearchAfterViewPages.delete(page);
+  scannedSearchAfterViewPages.delete(page);
   page.setDefaultTimeout(15_000);
   if (!signal) return page;
 
@@ -253,10 +317,19 @@ export async function closeSearchAfterViewDrawer(page: Pick<Page, 'locator'> & P
 
 async function waitForSearchAfterViewList(page: Page) {
   for (let attempt = 0; attempt < 75; attempt += 1) {
-    if (await isSearchAfterViewListPage(page)) return;
+    if (await isSearchAfterViewListPage(page)) {
+      await waitForSearchAfterViewPageIdle(page);
+      const firstRow = searchAfterViewDataRows(page).first();
+      await firstRow.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => undefined);
+      if (await firstRow.isVisible().catch(() => false)) return;
+    }
     await page.waitForTimeout(200);
   }
   throw new Error('提交后未返回视频列表');
+}
+
+export async function waitForSearchAfterViewSubmitCompletion(page: Page) {
+  await waitForSearchAfterViewList(page);
 }
 
 export function isSearchAfterViewListReady(filterVisible: boolean, drawerVisible: boolean) {
@@ -271,6 +344,17 @@ export function shouldResetSearchAfterViewPagination(activePageText: string | nu
   return activePageText?.trim() !== '1';
 }
 
+export function isSearchAfterViewPageDataChanged(
+  previousPage: string | null,
+  currentPage: string | null,
+  previousRow: string,
+  currentRow: string
+) {
+  const rowChanged = Boolean(currentRow.trim() && currentRow.trim() !== previousRow.trim());
+  const pageChanged = currentPage === null || previousPage === null || currentPage !== previousPage;
+  return rowChanged && pageChanged;
+}
+
 async function isSearchAfterViewListPage(page: Page) {
   const filterVisible = await page.getByText('配置状态', { exact: true }).isVisible().catch(() => false);
   const drawerVisible = await visibleSearchAfterViewDrawerCount(page) > 0;
@@ -279,7 +363,8 @@ async function isSearchAfterViewListPage(page: Page) {
 
 export async function configureSearchAfterViewPage(
   page: Page,
-  input: Pick<SearchAfterViewDraft, 'keywords' | 'sku' | 'skippedVideoIds'>
+  input: Pick<SearchAfterViewDraft, 'keywords' | 'sku' | 'skippedVideoIds'>,
+  options: { onTarget?: (target: SearchAfterViewTargetProgress) => void } = {}
 ): Promise<Omit<SearchAfterViewResult, 'submitted'> | null> {
   const keywords = validateSearchAfterViewKeywords(input.keywords);
   await closeOpenSearchAfterViewDrawers(page);
@@ -292,17 +377,21 @@ export async function configureSearchAfterViewPage(
 
   const target = await findTargetVideo(page, input.sku, input.skippedVideoIds);
   if (!target) return null;
-  const { row, sku, title: videoTitle, videoId } = target;
+  const { sku, title: videoTitle, videoId } = target;
+  options.onTarget?.({ videoId, sku });
 
   let products: SearchAfterViewProduct[];
   let mainProductId: string | null;
   try {
     await waitBeforeSearchAfterViewConfigure(page);
-    const currentRowText = await row.innerText();
-    if (!isSearchAfterViewVideoRowMatch(currentRowText, videoId)) {
-      throw new Error(`列表行已变化：期望视频 ${videoId}`);
+    const current = await findLiveSearchAfterViewCandidateRow(page, target);
+    if (!current) throw new Error(`列表行已变化：期望视频 ${videoId}、款号 ${sku}`);
+    const { row: currentRow, title: currentTitle } = current;
+    const currentRowText = await currentRow.innerText();
+    if (!isSearchAfterViewVideoTargetMatch(currentTitle, currentRowText, videoId, sku)) {
+      throw new Error(`列表行已变化：期望视频 ${videoId}、款号 ${sku}`);
     }
-    await (await getSearchAfterViewConfigureAction(row)).click();
+    await (await getSearchAfterViewConfigureAction(currentRow)).click();
     await page.getByText(/添加承接商品/).last().waitFor({ state: 'visible' });
     await waitForSearchAfterViewDrawerMatch(page, videoId, videoTitle);
     const drawerSku = await readSearchAfterViewTitleSku(page, sku);
@@ -369,7 +458,12 @@ async function readSearchAfterViewTitleSku(page: Page, expectedSku: string) {
   // the same visible drawer briefly instead of treating that intermediate DOM
   // state as a mismatched SKU.
   for (let attempt = 0; attempt < 40; attempt += 1) {
-    for (const scope of [heading.locator('xpath=..'), heading.locator('xpath=../..'), page.locator('div.auxo-drawer:visible').last()]) {
+    const drawer = page.locator('div.auxo-drawer:visible').last();
+    const titleContainer = drawer.locator('[id^="tag-input"]').last();
+    const scopes = await titleContainer.count()
+      ? [titleContainer, heading.locator('xpath=..'), heading.locator('xpath=../..'), drawer]
+      : [heading.locator('xpath=..'), heading.locator('xpath=../..'), drawer];
+    for (const scope of scopes) {
       const title = await scope.evaluate(function (element) {
         const values = [...element.querySelectorAll('input, textarea, [contenteditable="true"]')]
           .map(function (control) {
@@ -377,7 +471,7 @@ async function readSearchAfterViewTitleSku(page: Page, expectedSku: string) {
               ? control.value
               : control.textContent ?? '';
           });
-        return [element.textContent ?? '', ...values].join('\n');
+        return [element.getAttribute('value') ?? '', element.textContent ?? '', ...values].join('\n');
       }).catch(() => '');
       const sku = resolveSearchAfterViewTitleSku(title, expectedSku);
       if (sku) return sku;
@@ -388,7 +482,14 @@ async function readSearchAfterViewTitleSku(page: Page, expectedSku: string) {
 }
 
 export async function waitBeforeSearchAfterViewConfigure(page: Pick<Page, 'waitForTimeout'>) {
-  await page.waitForTimeout(3_000);
+  await page.waitForTimeout(SEARCH_AFTER_VIEW_SETTLE_DELAY_MS);
+}
+
+export async function enterSearchAfterViewProductSku(search: Locator, sku: string) {
+  await search.click();
+  await search.fill('');
+  await search.pressSequentially(sku, { delay: SEARCH_AFTER_VIEW_SKU_CHAR_DELAY_MS });
+  await search.press('Enter');
 }
 
 async function applySearchAfterViewFilters(page: Page) {
@@ -434,6 +535,8 @@ async function applySearchAfterViewFilters(page: Page) {
 
   await page.getByRole('button', { name: '查询', exact: true }).click();
   await resetSearchAfterViewPagination(page);
+  await waitForSearchAfterViewPageIdle(page);
+  await waitForSearchAfterViewRowsStable(page);
   const firstRow = searchAfterViewDataRows(page).first();
   await firstRow.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => undefined);
   if (await firstRow.isVisible().catch(() => false)) await firstRow.scrollIntoViewIfNeeded();
@@ -458,25 +561,52 @@ async function resetSearchAfterViewPagination(page: Page) {
 async function findTargetVideo(page: Page, expectedSku?: string, skippedVideoIds: string[] = []): Promise<SearchAfterViewVideoTarget | null> {
   const skipped = new Set(skippedVideoIds);
   for (;;) {
-    const rows = await searchAfterViewDataRows(page).all();
-    for (const row of rows) {
-      const text = await row.innerText();
-      if (!text.includes('待配置')) continue;
-      if (!await hasSearchAfterViewConfigureAction(row)) continue;
-      const sku = extractSearchAfterViewSku(text);
-      const videoId = text.match(/ID\s*(\d{10,})/)?.[1];
-      if (videoId && skipped.has(videoId)) continue;
-      if (videoId && sku && (!expectedSku || sku === expectedSku || text.includes(expectedSku))) {
-        const title = text.split(/\s+短视频\s+ID\s*/)[0];
-        const stableRow = searchAfterViewDataRows(page)
-          .filter({ hasText: videoId })
-          .first();
-        return { row: stableRow, sku, title, videoId };
-      }
+    let candidates = scannedSearchAfterViewPages.get(page);
+    if (!candidates) {
+      const { scannedRows } = await readSearchAfterViewScanRows(page);
+      candidates = collectSearchAfterViewCandidates(scannedRows);
+      scannedSearchAfterViewPages.set(page, candidates);
+    }
+    let staleCandidate = false;
+    for (const candidate of candidates) {
+      if (skipped.has(candidate.videoId)) continue;
+      if (expectedSku && candidate.sku !== expectedSku) continue;
+      const current = await findLiveSearchAfterViewCandidateRow(page, candidate);
+      if (current) return { row: current.row, ...candidate };
+      staleCandidate = true;
+      break;
+    }
+    if (staleCandidate) {
+      // The list can redraw after the ten-row scan. Re-scan this same page so
+      // the next click still uses a live row with the matching ID and SKU.
+      scannedSearchAfterViewPages.delete(page);
+      continue;
     }
     if (!await goToNextSearchAfterViewPage(page)) break;
+    scannedSearchAfterViewPages.delete(page);
   }
   return null;
+}
+
+async function findLiveSearchAfterViewCandidateRow(
+  page: Page,
+  candidate: SearchAfterViewCandidate
+) {
+  const { rows, scannedRows } = await readSearchAfterViewScanRows(page);
+  const index = findSearchAfterViewCandidateRowIndex(scannedRows, candidate);
+  return index < 0 ? null : { row: rows[index], title: scannedRows[index].title };
+}
+
+async function readSearchAfterViewScanRows(page: Page) {
+  const rows = searchAfterViewDataRows(page);
+  const rawRows = await rows.evaluateAll((elements) => elements.map((element) => ({
+    title: element.querySelector<HTMLElement>('div[class*="videoTitle"]')?.innerText ?? '',
+    text: (element as HTMLElement).innerText ?? element.textContent ?? ''
+  })));
+  return {
+    rows: await rows.all(),
+    scannedRows: rawRows.map(({ title, text }) => parseSearchAfterViewRowMetadata(title, text))
+  };
 }
 
 export async function goToNextSearchAfterViewPage(page: Page) {
@@ -536,13 +666,32 @@ export async function goToNextSearchAfterViewPage(page: Page) {
       { previousPage, previousRow },
       { timeout: 10_000 }
     );
-    return true;
   } catch (error) {
-    // A page can change without exposing an active-page attribute. Re-check
-    // the real data row before declaring pagination failed.
-    const currentRow = await searchAfterViewDataRows(page).first().innerText().catch(() => '');
-    return Boolean(currentRow.trim() && currentRow.trim() !== previousRow.trim());
+    // The page callback can resolve during an intermediate render. The
+    // locator-based check below waits for the settled first data row.
   }
+  const changed = await waitForSearchAfterViewPageData(page, previousPage, previousRow);
+  if (changed) {
+    await waitForSearchAfterViewPageIdle(page);
+    await waitForSearchAfterViewRowsStable(page);
+  }
+  return changed;
+}
+
+async function waitForSearchAfterViewPageData(
+  page: Pick<Page, 'locator' | 'waitForTimeout'>,
+  previousPage: string | null,
+  previousRow: string
+) {
+  const activePage = page.locator('li.ecom-pagination-item-active:visible, [aria-current="page"]:visible').first();
+  const firstRow = searchAfterViewDataRows(page).first();
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const currentPage = await activePage.getAttribute('title').catch(() => null) ?? await activePage.textContent().catch(() => null);
+    const currentRow = await firstRow.innerText().catch(() => '');
+    if (isSearchAfterViewPageDataChanged(previousPage, currentPage, previousRow, currentRow)) return true;
+    await page.waitForTimeout(250);
+  }
+  return false;
 }
 
 async function waitForSearchAfterViewPageIdle(page: Pick<Page, 'locator' | 'waitForTimeout'>) {
@@ -555,6 +704,26 @@ async function waitForSearchAfterViewPageIdle(page: Pick<Page, 'locator' | 'wait
     await page.waitForTimeout(250);
   }
   throw new Error('看后搜列表仍在加载，未点击下一页');
+}
+
+async function waitForSearchAfterViewRowsStable(page: Pick<Page, 'locator' | 'waitForTimeout'>) {
+  const firstRow = searchAfterViewDataRows(page).first();
+  let previous = '';
+  let stable = 0;
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const current = await firstRow.innerText().catch(() => '');
+    if (current.trim() && current === previous) {
+      stable += 1;
+      // The list replaces its first render a few seconds after filtering.
+      // Scan only after one full three-second stable window.
+      if (stable >= 12) return;
+    } else {
+      stable = 0;
+      previous = current;
+    }
+    await page.waitForTimeout(250);
+  }
+  throw new Error('看后搜列表数据未稳定，未继续配置');
 }
 
 function searchAfterViewDataRows(page: Pick<Page, 'locator'>) {
@@ -607,19 +776,16 @@ async function selectSearchAfterViewProducts(page: Page, sku: string) {
   // The picker first renders its existing product list. Do not type the SKU
   // into a half-mounted drawer; wait until the list below is actually ready.
   await waitForSearchAfterViewProductPicker(page, productDrawer);
-  await search.fill(sku);
-  await search.press('Enter');
+  await enterSearchAfterViewProductSku(search, sku);
   await waitForSearchAfterViewProductResults(page, productDrawer, sku);
 
   const products: SearchAfterViewProduct[] = [];
   const rows = productDrawer.locator('tr.ecom-table-row:visible')
-    .filter({ hasText: sku })
-    .filter({ has: productDrawer.locator('input.ecom-checkbox-input') });
+    .filter({ hasText: sku });
   await rows.first().waitFor({ state: 'visible' });
   for (const row of await rows.all()) {
     const checkbox = row.locator('input.ecom-checkbox-input').first();
     if (!await checkbox.isChecked()) await checkbox.check({ force: true });
-    await page.waitForTimeout(800);
     const text = await row.innerText();
     const id = await row.getAttribute('data-row-key') ?? text.match(/ID\s*(\d{10,})/)?.[1];
     if (id) products.push({ id, title: text });
@@ -649,26 +815,64 @@ export async function waitForSearchAfterViewProductPicker(page: Pick<Page, 'wait
   throw new Error('商品选择列表未加载');
 }
 
-async function waitForSearchAfterViewProductResults(page: Pick<Page, 'waitForTimeout'>, productDrawer: Locator, sku: string) {
+export async function waitForSearchAfterViewProductResults(page: Pick<Page, 'waitForTimeout'>, productDrawer: Locator, sku: string) {
   const rows = productDrawer.locator('tr.ecom-table-row:visible')
-    .filter({ hasText: sku })
-    .filter({ has: productDrawer.locator('input.ecom-checkbox-input') });
-  const emptyState = productDrawer.getByText(/暂无搜索结果|暂无关联商品|暂无商品/).last();
+    .filter({ hasText: sku });
 
   for (let attempt = 0; attempt < 60; attempt += 1) {
     if (await rows.first().isVisible().catch(() => false)) return;
-    if (await emptyState.isVisible().catch(() => false)) {
-      throw new Error(`商品搜索无匹配结果：${sku}`);
-    }
     await page.waitForTimeout(250);
   }
-  throw new Error(`商品搜索结果未加载：${sku}`);
+  throw new Error(`商品搜索无匹配结果：${sku}`);
 }
 
 async function setMainProduct(page: Page, productId: string) {
-  const card = page.getByText(`ID ${productId}`, { exact: true }).last().locator('xpath=../../../../..');
+  const id = page.getByText(`ID ${productId}`, { exact: true }).last();
+  await id.waitFor({ state: 'visible' });
+  const card = id.locator('xpath=ancestor::*[.//*[normalize-space(.)="设置主推"]][1]');
   const button = card.getByRole('button', { name: '设置主推', exact: true });
-  if (await button.count()) await button.click();
+  if (!await button.count()) throw new Error(`商品 ${productId} 没有找到设置主推按钮`);
+  await clickSearchAfterViewMainProductButton(button);
+  const drawer = page.locator('div.auxo-drawer:visible').last();
+  try {
+    await waitForSearchAfterViewMainProductConfirmation(page, drawer);
+  } catch {
+    throw new Error(`商品 ${productId} 设置主推后未确认成功`);
+  }
+}
+
+export async function clickSearchAfterViewMainProductButton(button: Pick<Locator, 'waitFor' | 'evaluate'>) {
+  await button.waitFor({ state: 'visible' });
+  await button.evaluate((element) => {
+    (element as HTMLElement).click();
+  });
+}
+
+export async function waitForSearchAfterViewMainProductConfirmation(
+  page: Pick<Page, 'waitForTimeout'> & Partial<Pick<Page, 'waitForFunction'>>,
+  drawer: Pick<Locator, 'innerText'>
+) {
+  if (page.waitForFunction) {
+    try {
+      await page.waitForFunction(
+        ({ selector, phrase }) => [...document.querySelectorAll(selector)].some((element) => {
+          const style = window.getComputedStyle(element);
+          return style.display !== 'none' && style.visibility !== 'hidden' && (element.textContent ?? '').includes(phrase);
+        }),
+        { selector: 'body', phrase: '已成功设为主推品' },
+        { timeout: 5_000, polling: 50 }
+      );
+      return;
+    } catch {
+      // Older page variants do not expose the confirmation as a separate node.
+    }
+  }
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const text = await drawer.innerText().catch(() => '');
+    if (isSearchAfterViewMainProductConfirmed(text)) return;
+    await page.waitForTimeout(SEARCH_AFTER_VIEW_MAIN_PRODUCT_POLL_DELAY_MS);
+  }
+  throw new Error('设置主推后未确认成功');
 }
 
 async function confirmSelectedProducts(page: Page) {
