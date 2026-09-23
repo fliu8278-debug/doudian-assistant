@@ -26,6 +26,7 @@ import {
   isSearchAfterViewDrawerMatch,
   isSearchAfterViewVideoRowMatch,
   isSearchAfterViewPageBusy,
+  hasSearchAfterViewConfigureAction,
   shouldResetSearchAfterViewPagination
 } from './searchAfterView';
 
@@ -54,6 +55,18 @@ describe('看后搜配置输入规则', () => {
   it('用视频 ID 锁定列表行，不随行号变化错点立即配置', () => {
     expect(isSearchAfterViewVideoRowMatch('短视频 ID 7677566971231178018 待配置', '7677566971231178018')).toBe(true);
     expect(isSearchAfterViewVideoRowMatch('短视频 ID 7681153853005303075 待配置', '7677566971231178018')).toBe(false);
+  });
+
+  it('翻页后立即配置即使渲染为链接也能识别', async () => {
+    const link = { count: vi.fn().mockResolvedValue(1) };
+    const row = {
+      getByRole: vi.fn((role: string) => role === 'button'
+        ? { count: vi.fn().mockResolvedValue(0) }
+        : link),
+      getByText: vi.fn(() => ({ count: vi.fn().mockResolvedValue(0) }))
+    };
+
+    await expect(hasSearchAfterViewConfigureAction(row as never)).resolves.toBe(true);
   });
 
   it('保留一至三个非空自定义词', () => {
@@ -282,6 +295,7 @@ describe('看后搜任务页面', () => {
 
   it('分页结构变化时仍能点击下一页', async () => {
     const click = vi.fn().mockResolvedValue(undefined);
+    const waitForFunction = vi.fn().mockResolvedValue(undefined);
     const nextButton = {
       isVisible: vi.fn().mockResolvedValue(true),
       evaluate: vi.fn().mockResolvedValue(false),
@@ -299,10 +313,11 @@ describe('看后搜任务页面', () => {
       locator: vi.fn((selector: string) => selector.includes('button[aria-label*="下一页"]')
         ? { ...empty, all: vi.fn().mockResolvedValue([nextButton]) }
         : empty),
-      waitForFunction: vi.fn().mockResolvedValue(undefined)
+      waitForFunction
     };
 
     await expect(goToNextSearchAfterViewPage(page as never)).resolves.toBe(true);
     expect(click).toHaveBeenCalledOnce();
+    expect(waitForFunction).toHaveBeenCalledWith(expect.any(String), expect.anything(), expect.anything());
   });
 });

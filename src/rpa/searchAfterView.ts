@@ -41,6 +41,30 @@ const taskPages = new WeakMap<AbortSignal, SearchAfterViewTaskPage>();
 // ponytail: keep one prepared list per automation page so the next item is
 // configured in-place instead of re-querying/restarting the list each time.
 const preparedSearchAfterViewPages = new WeakSet<Page>();
+const WAIT_FOR_SEARCH_AFTER_VIEW_FIRST_ROW_CHANGE = String.raw`(previousRow) => {
+  const visible = (element) => {
+    const style = window.getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden';
+  };
+  const row = [...document.querySelectorAll('tr.ecom-table-row, tr, [role="row"]')]
+    .find((element) => visible(element) && /短视频\s*ID/.test(element.textContent ?? ''));
+  return Boolean(row?.textContent?.trim() && row.textContent.trim() !== previousRow.trim());
+}`;
+const WAIT_FOR_SEARCH_AFTER_VIEW_PAGE_CHANGE = String.raw`({ previousPage, previousRow }) => {
+  const visible = (element) => {
+    const style = window.getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden';
+  };
+  const active = [...document.querySelectorAll('li.ecom-pagination-item-active, [aria-current="page"]')]
+    .find(visible);
+  const row = [...document.querySelectorAll('tr.ecom-table-row, tr, [role="row"]')]
+    .find((element) => visible(element) && /短视频\s*ID/.test(element.textContent ?? ''));
+  const currentPage = active?.getAttribute('title') ?? active?.textContent?.trim() ?? null;
+  const currentRow = row?.textContent?.trim() ?? '';
+  const rowChanged = Boolean(currentRow && currentRow !== previousRow.trim());
+  const pageChanged = currentPage !== previousPage;
+  return rowChanged && (pageChanged || !currentPage || !previousPage);
+}`;
 
 export class SearchAfterViewTaskAbortedError extends Error {
   constructor() {
@@ -96,6 +120,24 @@ export function isSearchAfterViewDrawerMatch(drawerText: string, videoId: string
 
 export function isSearchAfterViewVideoRowMatch(rowText: string, videoId: string) {
   return new RegExp(`(?:^|\\s)ID\\s*${videoId}(?:\\s|$)`).test(rowText);
+}
+
+export async function hasSearchAfterViewConfigureAction(row: Locator) {
+  return (
+    await row.getByRole('button', { name: '立即配置', exact: true }).count() > 0 ||
+    await row.getByRole('link', { name: '立即配置', exact: true }).count() > 0 ||
+    await row.getByText('立即配置', { exact: true }).count() > 0
+  );
+}
+
+async function getSearchAfterViewConfigureAction(row: Locator) {
+  const button = row.getByRole('button', { name: '立即配置', exact: true });
+  if (await button.count()) return button.first();
+  const link = row.getByRole('link', { name: '立即配置', exact: true });
+  if (await link.count()) return link.first();
+  const text = row.getByText('立即配置', { exact: true });
+  if (await text.count()) return text.first();
+  throw new Error('当前视频行没有立即配置入口');
 }
 
 export function validateSearchAfterViewKeywords(keywords: string[]) {
@@ -260,7 +302,7 @@ export async function configureSearchAfterViewPage(
     if (!isSearchAfterViewVideoRowMatch(currentRowText, videoId)) {
       throw new Error(`列表行已变化：期望视频 ${videoId}`);
     }
-    await row.getByRole('button', { name: '立即配置', exact: true }).click();
+    await (await getSearchAfterViewConfigureAction(row)).click();
     await page.getByText(/添加承接商品/).last().waitFor({ state: 'visible' });
     await waitForSearchAfterViewDrawerMatch(page, videoId, videoTitle);
     const drawerSku = await readSearchAfterViewTitleSku(page, sku);
@@ -289,11 +331,13 @@ async function waitForSearchAfterViewDrawerMatch(page: Page, videoId: string, vi
   let lastDrawerText = '';
   for (let attempt = 0; attempt < 40; attempt += 1) {
     const drawer = page.locator('div.auxo-drawer:visible').last();
-    lastDrawerText = await drawer.evaluate((element) => {
+    lastDrawerText = await drawer.evaluate(function (element) {
       const values = [...element.querySelectorAll('input, textarea, [contenteditable="true"]')]
-        .map((control) => control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement
-          ? control.value
-          : control.textContent ?? '');
+        .map(function (control) {
+          return control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement
+            ? control.value
+            : control.textContent ?? '';
+        });
       return [element.textContent ?? '', ...values].join(' ');
     }).catch(() => '');
     if (isSearchAfterViewDrawerMatch(lastDrawerText, videoId, videoTitle)) return;
@@ -326,11 +370,13 @@ async function readSearchAfterViewTitleSku(page: Page, expectedSku: string) {
   // state as a mismatched SKU.
   for (let attempt = 0; attempt < 40; attempt += 1) {
     for (const scope of [heading.locator('xpath=..'), heading.locator('xpath=../..'), page.locator('div.auxo-drawer:visible').last()]) {
-      const title = await scope.evaluate((element) => {
+      const title = await scope.evaluate(function (element) {
         const values = [...element.querySelectorAll('input, textarea, [contenteditable="true"]')]
-          .map((control) => control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement
-            ? control.value
-            : control.textContent ?? '');
+          .map(function (control) {
+            return control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement
+              ? control.value
+              : control.textContent ?? '';
+          });
         return [element.textContent ?? '', ...values].join('\n');
       }).catch(() => '');
       const sku = resolveSearchAfterViewTitleSku(title, expectedSku);
@@ -388,7 +434,7 @@ async function applySearchAfterViewFilters(page: Page) {
 
   await page.getByRole('button', { name: '查询', exact: true }).click();
   await resetSearchAfterViewPagination(page);
-  const firstRow = page.locator('tr.ecom-table-row:visible').first();
+  const firstRow = searchAfterViewDataRows(page).first();
   await firstRow.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => undefined);
   if (await firstRow.isVisible().catch(() => false)) await firstRow.scrollIntoViewIfNeeded();
 }
@@ -403,15 +449,7 @@ async function resetSearchAfterViewPagination(page: Page) {
   const previousRow = await searchAfterViewDataRows(page).first().innerText().catch(() => '');
   await firstPage.click();
   await page.waitForFunction(
-    (previousRow) => {
-      const visible = (element: Element) => {
-        const style = window.getComputedStyle(element);
-        return style.display !== 'none' && style.visibility !== 'hidden';
-      };
-      const row = [...document.querySelectorAll('tr.ecom-table-row, tr, [role="row"]')]
-        .find((element) => visible(element) && /短视频\s*ID/.test(element.textContent ?? ''));
-      return Boolean(row?.textContent?.trim() && row.textContent.trim() !== previousRow.trim());
-    },
+    WAIT_FOR_SEARCH_AFTER_VIEW_FIRST_ROW_CHANGE,
     previousRow,
     { timeout: 10_000 }
   ).catch(() => undefined);
@@ -420,17 +458,17 @@ async function resetSearchAfterViewPagination(page: Page) {
 async function findTargetVideo(page: Page, expectedSku?: string, skippedVideoIds: string[] = []): Promise<SearchAfterViewVideoTarget | null> {
   const skipped = new Set(skippedVideoIds);
   for (;;) {
-    const rows = await page.locator('tr.ecom-table-row:visible').all();
+    const rows = await searchAfterViewDataRows(page).all();
     for (const row of rows) {
       const text = await row.innerText();
       if (!text.includes('待配置')) continue;
-      if (!await row.getByRole('button', { name: '立即配置', exact: true }).count()) continue;
+      if (!await hasSearchAfterViewConfigureAction(row)) continue;
       const sku = extractSearchAfterViewSku(text);
       const videoId = text.match(/ID\s*(\d{10,})/)?.[1];
       if (videoId && skipped.has(videoId)) continue;
       if (videoId && sku && (!expectedSku || sku === expectedSku || text.includes(expectedSku))) {
         const title = text.split(/\s+短视频\s+ID\s*/)[0];
-        const stableRow = page.locator('tr.ecom-table-row:visible')
+        const stableRow = searchAfterViewDataRows(page)
           .filter({ hasText: videoId })
           .first();
         return { row: stableRow, sku, title, videoId };
@@ -494,23 +532,12 @@ export async function goToNextSearchAfterViewPage(page: Page) {
   await next.click();
   try {
     await page.waitForFunction(
-      ({ previousPage, previousRow }) => {
-        const visible = (element: Element) => {
-          const style = window.getComputedStyle(element);
-          return style.display !== 'none' && style.visibility !== 'hidden';
-        };
-        const active = [...document.querySelectorAll('li.ecom-pagination-item-active, [aria-current="page"]')]
-          .find(visible);
-        const row = [...document.querySelectorAll('tr.ecom-table-row, tr, [role="row"]')]
-          .find((element) => visible(element) && /短视频\s*ID/.test(element.textContent ?? ''));
-        const currentPage = active?.getAttribute('title') ?? active?.textContent?.trim() ?? null;
-        return currentPage !== previousPage || row?.textContent?.trim() !== previousRow.trim();
-      },
+      WAIT_FOR_SEARCH_AFTER_VIEW_PAGE_CHANGE,
       { previousPage, previousRow },
       { timeout: 10_000 }
     );
     return true;
-  } catch {
+  } catch (error) {
     // A page can change without exposing an active-page attribute. Re-check
     // the real data row before declaring pagination failed.
     const currentRow = await searchAfterViewDataRows(page).first().innerText().catch(() => '');
@@ -539,7 +566,7 @@ function searchAfterViewDataRows(page: Pick<Page, 'locator'>) {
 }
 
 async function isSearchAfterViewPaginationDisabled(button: Locator) {
-  return button.evaluate((element) => {
+  return button.evaluate(function (element) {
     let current: Element | null = element;
     for (let depth = 0; current && depth < 4; depth += 1, current = current.parentElement) {
       if (current.matches(':disabled') || current.getAttribute('aria-disabled') === 'true') return true;
@@ -550,7 +577,7 @@ async function isSearchAfterViewPaginationDisabled(button: Locator) {
 }
 
 async function isSearchAfterViewNextButton(button: Locator) {
-  return button.evaluate((element) => {
+  return button.evaluate(function (element) {
     const text = [
       element.textContent,
       element.getAttribute('aria-label'),
