@@ -6,6 +6,8 @@ export const DOUDIAN_SEARCH_AFTER_VIEW_URL = 'https://fxg.jinritemai.com/ffa/mco
 const SEARCH_AFTER_VIEW_SETTLE_DELAY_MS = 750;
 const SEARCH_AFTER_VIEW_SKU_CHAR_DELAY_MS = 80;
 const SEARCH_AFTER_VIEW_MAIN_PRODUCT_POLL_DELAY_MS = 50;
+const SEARCH_AFTER_VIEW_STATUS_LOAD_TIMEOUT_MS = 15_000;
+const SEARCH_AFTER_VIEW_STATUS_POLL_DELAY_MS = 200;
 
 export type SearchAfterViewDraft = {
   shopId: string;
@@ -127,6 +129,13 @@ export function runSearchAfterViewAbortable<T>(action: () => Promise<T>, signal?
 
 export function extractSearchAfterViewSku(title: string) {
   return title.match(/(?<!\d)(\d+)(?:-\d+)?(?!\d)/)?.[1] ?? null;
+}
+
+export function areSearchAfterViewStatusCountsLoaded(texts: string[]) {
+  const counts = texts
+    .map((text) => text.match(/\b(\d+)\s*$/)?.[1])
+    .filter((value): value is string => Boolean(value));
+  return counts.length >= 2 && counts.some((value) => Number(value) > 0);
 }
 
 export function parseSearchAfterViewRowMetadata(title: string, rowText: string): SearchAfterViewCandidateRow {
@@ -511,15 +520,37 @@ async function applySearchAfterViewFilters(page: Page) {
     throw new Error(`看后搜页面未加载：${page.url()}；标题：${await page.title().catch(() => '')}；页面文字：${context}`, { cause: error });
   }
   await page.getByText('配置状态', { exact: true }).scrollIntoViewIfNeeded();
-  // Wait for the status counters to finish their first render. On a fresh
-  // navigation the temporary value can be “待配置 0” even though rows arrive
-  // moments later.
-  await page.waitForTimeout(1_000);
   const pendingFilter = page.locator('div[class*="tagList_"]:visible').first()
     .locator('div[class*="tagItem_"]:visible')
     .filter({ hasText: /^待配置(?:\s|$)/ });
   await pendingFilter.waitFor({ state: 'visible' });
+
+  // On a fresh navigation the first render exposes placeholder “0” counters.
+  // Wait for the real status data before clicking, otherwise the next render
+  // clears the selected filter.
+  const statusTags = page.locator('div[class*="tagList_"]:visible').first()
+    .locator('div[class*="tagItem_"]:visible');
+  const deadline = Date.now() + SEARCH_AFTER_VIEW_STATUS_LOAD_TIMEOUT_MS;
+  let statusTexts: string[] = [];
+  while (Date.now() < deadline) {
+    statusTexts = await statusTags.allTextContents().catch(() => []);
+    if (areSearchAfterViewStatusCountsLoaded(statusTexts)) break;
+    await page.waitForTimeout(SEARCH_AFTER_VIEW_STATUS_POLL_DELAY_MS);
+  }
+  if (!areSearchAfterViewStatusCountsLoaded(statusTexts)) {
+    throw new Error(`看后搜配置状态计数未加载：${statusTexts.join(' | ')}`);
+  }
   await pendingFilter.click({ force: true });
+  const selectedDeadline = Date.now() + 5_000;
+  while (Date.now() < selectedDeadline) {
+    const className = await pendingFilter.getAttribute('class').catch(() => null);
+    if (className?.split(/\s+/).some((name) => name.startsWith('activeItem'))) break;
+    await page.waitForTimeout(100);
+  }
+  const selectedClassName = await pendingFilter.getAttribute('class').catch(() => null);
+  if (!selectedClassName?.split(/\s+/).some((name) => name.startsWith('activeItem'))) {
+    throw new Error('看后搜“待配置”筛选未选中');
+  }
   const thirtyDayFilter = page.locator('label.ecom-radio-button-wrapper:visible').filter({ hasText: '近30天' }).last();
   await thirtyDayFilter.click({ force: true });
 

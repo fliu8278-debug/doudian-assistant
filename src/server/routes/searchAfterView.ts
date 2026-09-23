@@ -4,9 +4,9 @@ import { submitSearchAfterViewTask } from '../../rpa/searchAfterView';
 import { db } from '../db';
 import { SearchAfterViewQueue } from '../searchAfterViewQueue';
 
-const searchAfterViewQueue = new SearchAfterViewQueue(async (input, signal) => {
+const searchAfterViewQueue = new SearchAfterViewQueue(async (input, signal, onTarget) => {
   const profile = getShopAuthStorage(db, input.shopId);
-  return submitSearchAfterViewTask(profile, input, { autoSubmit: true, signal });
+  return submitSearchAfterViewTask(profile, input, { autoSubmit: true, signal, onTarget });
 });
 
 export function createSearchAfterViewRouter(queue = searchAfterViewQueue) {

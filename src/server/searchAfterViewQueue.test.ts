@@ -28,6 +28,27 @@ describe('看后搜连续任务', () => {
     });
   });
 
+  it('开始配置时立即公开当前视频 ID 和款号', async () => {
+    let releaseCurrent: (() => void) | undefined;
+    const current = new Promise<void>((resolve) => { releaseCurrent = resolve; });
+    const queue = new SearchAfterViewQueue(async (_input, _signal, onTarget) => {
+      onTarget?.({ videoId: 'video-232619', sku: '232619' });
+      await current;
+      return null;
+    });
+
+    const task = queue.start({ shopId: 'shop-1', keywords: ['斯凯奇男鞋'] });
+    await Promise.resolve();
+    expect(queue.get(task.id)).toMatchObject({
+      status: 'running',
+      currentVideoId: 'video-232619',
+      currentSku: '232619'
+    });
+
+    releaseCurrent?.();
+    await queue.waitFor(task.id);
+  });
+
   it('暂停时立刻中断当前条，不把它记录为已提交', async () => {
     let abortSeen = false;
     const queue = new SearchAfterViewQueue(async (_input, signal) => {

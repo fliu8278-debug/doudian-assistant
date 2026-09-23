@@ -39,10 +39,16 @@ import {
   shouldResetSearchAfterViewPagination,
   collectSearchAfterViewCandidates,
   findSearchAfterViewCandidateRowIndex,
-  isSearchAfterViewPageDataChanged
+  isSearchAfterViewPageDataChanged,
+  areSearchAfterViewStatusCountsLoaded
 } from './searchAfterView';
 
 describe('看后搜配置输入规则', () => {
+  it('只有状态计数加载出真实数据后才认为筛选可点击', () => {
+    expect(areSearchAfterViewStatusCountsLoaded(['全部 0', '待配置 0', '待优化 0'])).toBe(false);
+    expect(areSearchAfterViewStatusCountsLoaded(['全部 25', '待配置 22', '待优化 3'])).toBe(true);
+  });
+
   it('先扫描整页视频，只保留有款号的视频 ID 并保持顺序', () => {
     expect(collectSearchAfterViewCandidates([
       { title: '视频一 232619-01', videoId: '1000000000001', pending: true, hasConfigure: true },

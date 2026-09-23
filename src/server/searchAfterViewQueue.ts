@@ -9,8 +9,14 @@ export type SearchAfterViewTask = {
   status: SearchAfterViewTaskStatus;
   configured: number;
   errors: number;
+  currentVideoId: string | null;
   currentSku: string | null;
   message: string;
+};
+
+export type SearchAfterViewTargetProgress = {
+  videoId: string;
+  sku: string;
 };
 
 export type SearchAfterViewTaskInput = {
@@ -26,11 +32,17 @@ type Entry = {
   task: SearchAfterViewTask;
 };
 
+type RunOne = (
+  input: SearchAfterViewTaskInput,
+  signal: AbortSignal,
+  onTarget?: (target: SearchAfterViewTargetProgress) => void
+) => Promise<SearchAfterViewResult | null>;
+
 export class SearchAfterViewQueue {
   private activeTaskByShop = new Map<string, string>();
   private entries = new Map<string, Entry>();
 
-  constructor(private readonly runOne: (input: SearchAfterViewTaskInput, signal: AbortSignal) => Promise<SearchAfterViewResult | null>) {}
+  constructor(private readonly runOne: RunOne) {}
 
   start(input: SearchAfterViewTaskInput) {
     const activeTaskId = this.activeTaskByShop.get(input.shopId);
@@ -44,6 +56,7 @@ export class SearchAfterViewQueue {
       status: 'running',
       configured: 0,
       errors: 0,
+      currentVideoId: null,
       currentSku: null,
       message: '正在配置下一条视频'
     };
@@ -80,7 +93,15 @@ export class SearchAfterViewQueue {
       while (!entry.controller.signal.aborted) {
         let result: SearchAfterViewResult | null;
         try {
-          result = await this.runOne({ ...input, skippedVideoIds: [...skippedVideoIds] }, entry.controller.signal);
+          result = await this.runOne(
+            { ...input, skippedVideoIds: [...skippedVideoIds] },
+            entry.controller.signal,
+            (target) => {
+              entry.task.currentVideoId = target.videoId;
+              entry.task.currentSku = target.sku;
+              entry.task.message = `正在配置视频 ${target.videoId}（款号 ${target.sku}）`;
+            }
+          );
         } catch (caught) {
           if (entry.controller.signal.aborted) break;
           if (caught instanceof SearchAfterViewRowError) {

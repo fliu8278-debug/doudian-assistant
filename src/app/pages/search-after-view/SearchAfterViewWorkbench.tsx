@@ -5,6 +5,7 @@ import { getSearchAfterViewTask, pauseSearchAfterViewTask, startSearchAfterView,
 export type SearchAfterViewStatus = '待配置' | '审核中' | '已完成';
 
 const DEFAULT_KEYWORDS = ['斯凯奇纵云', '斯凯奇速锋', '斯凯奇男鞋'];
+const TASK_REFRESH_INTERVAL_MS = 250;
 
 export function formatSearchAfterViewError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -38,7 +39,7 @@ export function SearchAfterViewWorkbench({ currentShop, shops = [] }: { currentS
         if (active) setNotice(formatSearchAfterViewError(caught));
       }
     };
-    const timer = window.setInterval(() => void refresh(), 1_000);
+    const timer = window.setInterval(() => void refresh(), TASK_REFRESH_INTERVAL_MS);
     return () => {
       active = false;
       window.clearInterval(timer);
@@ -117,7 +118,7 @@ export function SearchAfterViewWorkbench({ currentShop, shops = [] }: { currentS
 
         <section className={`panel runPanel run-${taskClass} searchAfterViewExecution`} aria-live="polite">
           <div className="runPanelHeader"><h2>当前执行</h2><span className={`runState ${taskClass}`}>{taskLabel}</span></div>
-          <div className="runFocus"><span>当前款号</span><strong>{task?.currentSku ?? '--'}</strong><p>{task?.message ?? '开始配置后，可以在这里查看当前处理的款号。'}</p></div>
+          <div className="runFocus"><span>正在配置视频 ID</span><strong>{task?.currentVideoId ?? '--'}</strong><span>对应款号</span><strong>{task?.currentSku ?? '--'}</strong><p>{task?.message ?? '开始配置后，可以在这里查看当前处理的视频 ID 和款号。'}</p></div>
           <div className="runProgressBlock"><div className="runProgressMeta"><span>任务状态</span><b>{taskLabel}</b></div><div className="runProgressTrack" aria-label="任务状态"><i style={{ width: running ? '100%' : '0%' }} /></div></div>
           <div className="runStats" aria-label="任务进度"><span>已配置 <b>{task?.configured ?? 0}</b></span><span>状态 <b>{taskLabel}</b></span><span>错误 <b>{task?.errors ?? 0}</b></span></div>
           <div className="logBox"><strong>执行记录</strong><div className="logEmpty">{task?.message ?? '暂无执行记录'}</div></div>

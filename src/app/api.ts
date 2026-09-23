@@ -20,6 +20,7 @@ export type SearchAfterViewTask = {
   status: 'running' | 'paused' | 'complete' | 'failed';
   configured: number;
   errors: number;
+  currentVideoId: string | null;
   currentSku: string | null;
   message: string;
 };
