@@ -15,8 +15,13 @@ import { runWithConcurrency } from './couponQueue';
 
 const runningBatches = new Set<string>();
 const cancelledBatches = new Set<string>();
-const DEFAULT_WORKER_CONCURRENCY = 2;
+const DEFAULT_WORKER_CONCURRENCY = 1;
 const NEWCOMER_GIFT_TASK_TIMEOUT_MS = 90_000;
+const NEWCOMER_GIFT_TASK_GAP_MS = 1_000;
+
+export function newcomerGiftTaskGapMs() {
+  return NEWCOMER_GIFT_TASK_GAP_MS;
+}
 
 export function enqueueNewcomerGiftBatch(
   db: AppDatabase,
@@ -60,6 +65,7 @@ async function runNewcomerGiftBatch(db: AppDatabase, batchId: string, concurrenc
       concurrency,
       (task) => runNewcomerGiftTask(db, batch.shopId, profile, task),
       {
+        delayMs: NEWCOMER_GIFT_TASK_GAP_MS,
         shouldStop: () => cancelledBatches.has(batchId)
       }
     );
