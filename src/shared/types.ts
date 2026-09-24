@@ -40,6 +40,7 @@ export type CouponTaskStatus =
   | 'pending'
   | 'running'
   | 'waiting_confirm'
+  | 'skipped'
   | 'success'
   | 'failed';
 

@@ -6,24 +6,30 @@ import { fanCouponSelectors } from './selectors';
 import type { Locator, Page } from 'playwright';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { selectableProductRows } from '../priceRange';
+import { shouldSelectProductRow } from '../priceRange';
 import { appDataPath } from '../../paths';
+import { fillDoudianDateTimeRange } from './timePicker';
 
 export type FanCouponDraft = CouponRow & { shopId: string };
 export type SubmitFanCouponOptions = { autoSubmit?: boolean };
+export type FanCouponTaskResult = { submitted: boolean; skipped?: boolean; message: string };
 
-export async function submitFanCouponTask(profile: ShopAuthStorage, draft: FanCouponDraft, options: SubmitFanCouponOptions = {}) {
+const FAN_COUPON_STEP_TIMEOUT_MS = 3_000;
+const FAN_COUPON_DIRECT_ENTRY_TIMEOUT_MS = 5_000;
+const FAN_COUPON_SEARCH_TIMEOUT_MS = 5_000;
+
+export async function submitFanCouponTask(profile: ShopAuthStorage, draft: FanCouponDraft, options: SubmitFanCouponOptions = {}): Promise<FanCouponTaskResult> {
   const { page } = await openDoudianShopPage(profile, DOUDIAN_FAN_COUPON_CREATE_URL, { headless: false, newPage: true });
-  page.setDefaultTimeout(15_000);
-  await page.waitForLoadState('domcontentloaded');
+  page.setDefaultTimeout(FAN_COUPON_STEP_TIMEOUT_MS);
   try {
-    await couponNameField(page).waitFor({ state: 'visible' });
+    await page.waitForLoadState('domcontentloaded');
     if (await isLoginPage(page)) throw new Error('自动化浏览器未登录：请先在店铺窗口完成登录并保存登录状态');
+    await couponNameField(page).waitFor({ state: 'visible', timeout: FAN_COUPON_DIRECT_ENTRY_TIMEOUT_MS });
     await fill(couponNameField(page), draft.couponName);
     await chooseFormOption(page, '涨粉账号', '店铺官方账号');
-    await fillReceiveTime(page, draft.startTime, draft.endTime);
     await chooseFormOption(page, '使用时间', '限制有效天数');
     await fill(validPeriodField(page), String(draft.validDays));
+    await fillReceiveTime(page, draft.startTime, draft.endTime);
     await chooseFormOption(page, '自动续期', '不开启');
     await chooseSelect(page, fanCouponSelectors.discountType, '满减');
     await fillDiscountAmount(page, draft.thresholdAmount, draft.discountAmount);
@@ -37,9 +43,54 @@ export async function submitFanCouponTask(profile: ShopAuthStorage, draft: FanCo
     await page.close().catch(() => undefined);
     return { submitted: true, message: `已提交涨粉券：${draft.couponName}` };
   } catch (caught) {
+    if (caught instanceof FanCouponSkipError) {
+      await page.close().catch(() => undefined);
+      return fanCouponSkipResult(caught.keyword);
+    }
     const path = await saveFailureScreenshot(page, draft.couponName);
     throw new Error(`${caught instanceof Error ? caught.message : '涨粉券填写失败'}，截图：${path}`);
   }
+}
+
+export function fanCouponSkipResult(keyword: string): FanCouponTaskResult {
+  return { submitted: false, skipped: true, message: `已跳过款号：${keyword}，没有普通单价商品` };
+}
+
+class FanCouponSkipError extends Error {
+  constructor(readonly keyword: string) {
+    super(`没有普通单价商品：${keyword}`);
+  }
+}
+
+export async function fillFanCouponReceiveTime(page: Page, startTime: string, endTime: string) {
+  await fillDoudianDateTimeRange(page, startTime, endTime);
+}
+
+export function shouldSelectFanCouponProductRow(text: string) {
+  return shouldSelectProductRow(text) && !/(国补|国家补贴|政府补贴)/.test(text);
+}
+
+export async function submitFanCouponProductSearch(search: Locator) {
+  const siblingButton = search.locator('xpath=following-sibling::button').last();
+  if (await siblingButton.count() && await siblingButton.isVisible().catch(() => false)) {
+    await siblingButton.click();
+    return;
+  }
+  const searchButton = search.locator('xpath=..').locator('[role="button"]:not([aria-label="close-circle"])').last();
+  if (await searchButton.count()) {
+    await searchButton.click();
+    return;
+  }
+  await search.press('Enter');
+}
+
+export async function waitForFanCouponProductRows(page: Page) {
+  const rows = page
+    .locator('tr.ecom-mcenter-table-row:visible')
+    .filter({ hasText: /商品ID[：:]/ })
+    .filter({ has: page.locator('input[type="checkbox"], [role="checkbox"], [class*="checkbox"], [class*="Checkbox"]') });
+  await rows.first().waitFor({ state: 'visible', timeout: FAN_COUPON_SEARCH_TIMEOUT_MS });
+  return rows;
 }
 
 function couponNameField(page: Page) { return page.locator(`${fanCouponSelectors.couponName}, input[placeholder="请输入优惠券名称"]`).first(); }
@@ -59,16 +110,7 @@ async function isLoginPage(page: Page) {
 }
 
 async function fillReceiveTime(page: Page, startTime: string, endTime: string) {
-  const inputs = page.locator('.arco-picker-range input:visible');
-  if ((await inputs.count()) < 2) throw new Error('没有找到领取时间输入框');
-  for (const [index, value] of [startTime, endTime].entries()) {
-    await inputs.nth(index).click();
-    await inputs.nth(index).press('Control+A');
-    await inputs.nth(index).type(value, { delay: 8 });
-  }
-  await inputs.nth(1).press('Enter').catch(() => undefined);
-  await page.mouse.click(20, 20);
-  await page.waitForTimeout(500);
+  await fillFanCouponReceiveTime(page, startTime, endTime);
 }
 
 async function chooseSelect(page: Page, selector: string, text: string) {
@@ -77,9 +119,16 @@ async function chooseSelect(page: Page, selector: string, text: string) {
   await page.getByText(text, { exact: false }).last().click();
 }
 
-async function chooseFormOption(page: Page, fieldLabel: string, optionText: string) {
-  const checked = page.locator('label').filter({ hasText: optionText }).filter({ has: page.locator('input:checked') }).first();
-  if (await checked.count()) return;
+export async function chooseFormOption(page: Page, fieldLabel: string, optionText: string) {
+  const radio = page.locator('label.ecom-mcenter-radio-wrapper').filter({ hasText: optionText }).last();
+  if (await radio.count() && await radio.isVisible().catch(() => false)) {
+    const input = radio.locator('input[type="radio"]').first();
+    if (await input.isChecked().catch(() => false)) return;
+    await radio.click();
+    await input.check({ force: true });
+    if (await input.isChecked().catch(() => false)) return;
+    throw new Error(`选项未生效：${optionText}`);
+  }
   const field = page.locator(`xpath=//*[contains(normalize-space(.),"${fieldLabel}")]/ancestor::*[contains(@class,"semi-form-field")][1]`);
   if (await field.count()) return field.getByText(optionText, { exact: false }).click();
   await page.getByText(optionText, { exact: false }).last().click();
@@ -97,24 +146,40 @@ async function choosePerUserLimit(page: Page) {
 }
 
 async function pickProduct(page: Page, keyword: string) {
-  await page.getByText('添加商品', { exact: false }).last().click();
-  const type = page.getByText('按商品ID搜索', { exact: true }).last();
-  if (await type.count()) {
-    await type.click();
-    await page.getByText('按货号搜索', { exact: true }).last().click();
+  const add = page.locator('button.ecom-mcenter-btn-dashed').filter({ hasText: '添加商品' }).last();
+  await add.scrollIntoViewIfNeeded();
+  await add.click();
+  const search = page.locator('#search_value:visible');
+  await search.waitFor({ state: 'visible', timeout: 10_000 });
+  await search.fill(keyword);
+  if ((await search.inputValue()).trim() !== keyword) throw new Error(`商品搜索框未填入款号：${keyword}`);
+  await submitFanCouponProductSearch(search);
+  const rows = await (await waitForFanCouponProductRows(page)).all();
+  const selectableRows: Locator[] = [];
+  for (const row of rows) {
+    const checkbox = row.locator('input.ecom-mcenter-checkbox-input').first();
+    const selectable = shouldSelectFanCouponProductRow(await row.innerText().catch(() => ''));
+    const enabled = await checkbox.isEnabled().catch(() => true);
+    if (selectable && enabled) selectableRows.push(row);
   }
-  const search = page.locator(`${fanCouponSelectors.productSearch}:visible, input[placeholder="请输入商品ID"]:visible, input[placeholder*="货号"]:visible`).last();
-  await fill(search, keyword);
-  await search.press('Enter');
-  const rows = await page.locator('tr, .semi-table-row, .ecom-mcenter-table-row').filter({ hasText: keyword }).all();
-  const selectableRows = await selectableProductRows(rows);
-  if (!selectableRows.length) throw new Error(`商品搜索无可选结果：${keyword}`);
+  if (!selectableRows.length) throw new FanCouponSkipError(keyword);
   for (const row of selectableRows) await checkProductRow(row);
   await page.getByText('选择', { exact: true }).last().click();
-  await page.waitForTimeout(800);
 }
 
 async function checkProductRow(row: Locator) {
+  const exactInput = row.locator('input.ecom-mcenter-checkbox-input').first();
+  if (await exactInput.count()) {
+    if (await exactInput.isChecked().catch(() => false)) return;
+    await exactInput.check({ force: true });
+    if (await exactInput.isChecked().catch(() => false)) return;
+    const selectionCell = row.locator('td.ecom-mcenter-table-selection-column').first();
+    if (await selectionCell.count()) await selectionCell.click({ force: true });
+    if (await exactInput.isChecked().catch(() => false)) return;
+    throw new Error('商品复选框点击后仍未选中');
+  }
+  const selectionCell = row.locator('td.ecom-mcenter-table-selection-column').first();
+  if (await selectionCell.count()) return selectionCell.click({ force: true });
   const input = row.locator('input[type="checkbox"]').first();
   if (await input.count()) return input.check({ force: true }).catch(() => input.click({ force: true }));
   const checkbox = row.locator('[role="checkbox"], label[class*="checkbox"], [class*="checkbox"], [class*="Checkbox"]').first();
@@ -141,7 +206,7 @@ async function submitCoupon(page: Page) {
   await Promise.race([
     page.getByText(/成功|创建成功|提交成功/, { exact: false }).first().waitFor({ state: 'visible', timeout: 12_000 }),
     page.waitForURL((url) => !url.href.includes('/coupon/detail'), { timeout: 12_000 })
-  ]).catch(() => undefined);
+  ]);
   if (page.url().includes('/coupon/detail')) throw new Error('提交后没有确认成功，已保留页面等待检查');
 }
 

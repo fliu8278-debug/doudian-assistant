@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { runWithConcurrency } from './couponQueue';
+import { couponTaskStatusForResult, runWithConcurrency } from './couponQueue';
 
 describe('coupon queue concurrency', () => {
+  it('records a skipped fan-coupon task as skipped instead of waiting for confirmation', () => {
+    expect(couponTaskStatusForResult({
+      submitted: false,
+      skipped: true,
+      message: '已跳过款号：216704，没有普通单价商品'
+    })).toEqual({ status: 'skipped', message: '已跳过款号：216704，没有普通单价商品' });
+  });
   it('refills a free worker slot without waiting for the whole group', async () => {
     const events: string[] = [];
     let running = 0;

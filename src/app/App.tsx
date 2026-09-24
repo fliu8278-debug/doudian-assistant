@@ -596,7 +596,7 @@ function NewcomerGiftWorkbench({ currentShop, shops }: { currentShop?: Shop; sho
     ?? activeBatch?.tasks.find((task) => task.status === 'pending');
   const batchCounts = activeBatch ? countTaskStatus(activeBatch) : null;
   const runTotal = activeBatch?.totalCount ?? previewRows.length;
-  const runDone = batchCounts ? batchCounts.success + batchCounts.failed + batchCounts.waiting_confirm : 0;
+  const runDone = batchCounts ? batchCounts.success + batchCounts.failed + batchCounts.skipped + batchCounts.waiting_confirm : 0;
   const runProgress = runTotal > 0 ? Math.round((runDone / runTotal) * 100) : 0;
   const runState = runStateText(activeBatch, previewRows.length, errorRows.length);
 
@@ -877,7 +877,7 @@ export function CouponWorkbench({ currentShop, shops, kind = 'fan' }: { currentS
     ?? activeBatch?.tasks.find((task) => task.status === 'pending');
   const batchCounts = activeBatch ? countTaskStatus(activeBatch) : null;
   const runTotal = activeBatch?.totalCount ?? previewRows.length;
-  const runDone = batchCounts ? batchCounts.success + batchCounts.failed + batchCounts.waiting_confirm : 0;
+  const runDone = batchCounts ? batchCounts.success + batchCounts.failed + batchCounts.skipped + batchCounts.waiting_confirm : 0;
   const runProgress = runTotal > 0 ? Math.round((runDone / runTotal) * 100) : 0;
   const runState = runStateText(activeBatch, previewRows.length, errorRows.length);
 
@@ -1263,6 +1263,7 @@ function countTaskStatus(batch: CouponBatch | NewcomerGiftBatch) {
     pending: 0,
     running: 0,
     waiting_confirm: 0,
+    skipped: 0,
     success: 0,
     failed: 0
   });
@@ -1271,6 +1272,7 @@ function countTaskStatus(batch: CouponBatch | NewcomerGiftBatch) {
 function taskStatusText(status?: string) {
   if (status === 'running') return '执行中';
   if (status === 'waiting_confirm') return '待确认';
+  if (status === 'skipped') return '已跳过';
   if (status === 'success') return '完成';
   if (status === 'failed') return '失败';
   return '待提交';

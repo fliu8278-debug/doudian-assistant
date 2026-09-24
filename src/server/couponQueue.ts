@@ -12,6 +12,7 @@ import { submitProductCouponTask } from '../rpa/coupon/productCoupon';
 import type { CouponBatch, CouponRow } from '../shared/types';
 import type { AppDatabase } from '../db/database';
 import type { ProductSelectionMode } from '../rpa/priceRange';
+import type { FanCouponTaskResult } from '../rpa/coupon/fanCoupon';
 
 const runningBatches = new Set<string>();
 const cancelledBatches = new Set<string>();
@@ -123,12 +124,8 @@ async function runCouponTask(
       }),
       COUPON_TASK_TIMEOUT_MS
     );
-    updateCouponTaskStatus(
-      db,
-      task.id,
-      result.submitted ? 'success' : 'waiting_confirm',
-      result.submitted ? null : result.message
-    );
+    const outcome = couponTaskStatusForResult(result);
+    updateCouponTaskStatus(db, task.id, outcome.status, outcome.message);
   } catch (caught) {
     updateCouponTaskStatus(
       db,
@@ -137,6 +134,12 @@ async function runCouponTask(
       caught instanceof Error ? caught.message : '建券任务失败'
     );
   }
+}
+
+export function couponTaskStatusForResult(result: FanCouponTaskResult) {
+  if (result.submitted) return { status: 'success' as const, message: null };
+  if (result.skipped) return { status: 'skipped' as const, message: result.message };
+  return { status: 'waiting_confirm' as const, message: result.message };
 }
 
 export async function runWithConcurrency<T>(
@@ -178,10 +181,11 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
 function finalBatchStatus(batch: CouponBatch | undefined) {
   if (!batch) return 'failed';
   const failed = batch.tasks.filter((task) => task.status === 'failed').length;
+  const skipped = batch.tasks.filter((task) => task.status === 'skipped').length;
   const success = batch.tasks.filter((task) => task.status === 'success').length;
   const waiting = batch.tasks.filter((task) => task.status === 'waiting_confirm').length;
-  const done = success + waiting;
-  if (failed === 0 && success === batch.totalCount) return 'success';
+  const done = success + skipped + waiting;
+  if (failed === 0 && success + skipped === batch.totalCount) return 'success';
   if (failed === 0 && done === batch.totalCount) return 'waiting_confirm';
   if (failed === batch.totalCount) return 'failed';
   if (done > 0 || failed > 0) return 'partial';
