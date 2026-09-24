@@ -64,6 +64,7 @@ export async function submitProductCouponTask(
     await pacedStep('核对建券数据', () => assertCouponDraft(page, draft));
   } catch (caught) {
     const screenshotPath = await saveFailureScreenshot(page, draft.couponName);
+    await page.close().catch(() => undefined);
     const message = caught instanceof Error ? caught.message : '建券填写失败';
     throw new Error(`${message}，截图：${screenshotPath}`);
   }
