@@ -20,6 +20,10 @@ const DEFAULT_COUPON_WORKER_CONCURRENCY = 1;
 const COUPON_TASK_TIMEOUT_MS = 90_000;
 const COUPON_TASK_GAP_MS = 2_000;
 
+export function couponTaskGapMs(kind: 'fan' | 'product') {
+  return kind === 'product' ? 0 : COUPON_TASK_GAP_MS;
+}
+
 export function enqueueCouponBatch(
   db: AppDatabase,
   input: {
@@ -85,7 +89,7 @@ async function runCouponBatch(db: AppDatabase, batchId: string, concurrency: num
       concurrency,
       (task) => runCouponTask(db, batch.shopId, profile, task, kind, selectionMode),
       {
-        delayMs: COUPON_TASK_GAP_MS,
+        delayMs: couponTaskGapMs(kind),
         shouldStop: () => cancelledBatches.has(batchId)
       }
     );

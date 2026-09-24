@@ -19,7 +19,7 @@ export type SubmitProductCouponOptions = {
   autoSubmit?: boolean;
 };
 
-const PRODUCT_COUPON_STEP_DELAY_MS = 1_000;
+export const PRODUCT_COUPON_STEP_DELAY_MS = 0;
 
 export async function submitProductCouponTask(
   profile: ShopAuthStorage,

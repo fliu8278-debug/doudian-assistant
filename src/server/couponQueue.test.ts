@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { couponTaskStatusForResult, runWithConcurrency } from './couponQueue';
+import { couponTaskGapMs, couponTaskStatusForResult, runWithConcurrency } from './couponQueue';
 
 describe('coupon queue concurrency', () => {
+  it('does not add a gap before the next product-coupon task', () => {
+    expect(couponTaskGapMs('product')).toBe(0);
+  });
+
   it('records a skipped fan-coupon task as skipped instead of waiting for confirmation', () => {
     expect(couponTaskStatusForResult({
       submitted: false,
