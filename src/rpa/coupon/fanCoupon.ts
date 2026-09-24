@@ -194,13 +194,13 @@ async function assertCouponDraft(page: Page, draft: FanCouponDraft) {
 }
 
 async function submitCoupon(page: Page) {
-  const buttons = await page.getByRole('button', { name: '提交', exact: true }).all();
-  const visible = [] as Locator[];
-  for (const button of buttons) if (await button.isVisible().catch(() => false)) visible.push(button);
-  const button = visible.at(-1);
+  const button = page.locator('button.ecom-mcenter-btn-primary:visible').filter({ hasText: '提交' }).last();
   if (!button) throw new Error('没有找到提交按钮');
   await button.scrollIntoViewIfNeeded();
-  await button.click();
+  await button.click({ force: true });
+  if (page.url().includes('/coupon/detail') && await button.isVisible().catch(() => false)) {
+    await button.click({ force: true });
+  }
   const confirm = page.locator('.semi-modal, .arco-modal, .semi-popover, .arco-popover').getByRole('button', { name: /确认|确定/ }).last();
   if (await confirm.isVisible().catch(() => false)) await confirm.click();
   await Promise.race([
