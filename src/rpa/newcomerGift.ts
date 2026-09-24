@@ -259,16 +259,19 @@ async function clickSubmitConfirmIfPresent(page: Page) {
   }
 }
 
-async function waitForSubmitJump(page: Page) {
-  if (!page.url().includes('/allowance/create')) return true;
-  await page.waitForURL((url) => !url.href.includes('/allowance/create'), { timeout: 12_000 }).catch(() => undefined);
-  return !page.url().includes('/allowance/create');
+export async function waitForSubmitJump(page: Page) {
+  if (page.url().includes('/allowance/create')) {
+    await page.waitForURL((url) => !url.href.includes('/allowance/create'), { timeout: 12_000 }).catch(() => undefined);
+  }
+  if (page.url().includes('/allowance/create')) return false;
+  await page.waitForLoadState('load', { timeout: 12_000 });
+  return true;
 }
 
-async function closeSubmittedPage(page: Page) {
+export async function closeSubmittedPage(page: Page) {
   if (page.isClosed()) return;
-  await page.waitForLoadState('domcontentloaded', { timeout: 3_000 }).catch(() => undefined);
-  await page.close({ runBeforeUnload: false }).catch(() => undefined);
+  await page.waitForLoadState('load', { timeout: 12_000 });
+  await page.close({ runBeforeUnload: false });
 }
 
 async function clickNewcomerGiftSubmit(page: Page) {
