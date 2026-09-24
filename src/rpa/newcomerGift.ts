@@ -17,8 +17,12 @@ export type NewcomerGiftDraft = {
   discountAmount: number;
 };
 
+export function newcomerGiftPageOptions() {
+  return { headless: false, newPage: false } as const;
+}
+
 export async function submitNewcomerGiftTask(profile: ShopAuthStorage, draft: NewcomerGiftDraft) {
-  const { page } = await openDoudianShopPage(profile, DOUDIAN_NEWCOMER_GIFT_CREATE_URL, { headless: false, newPage: true });
+  const { page } = await openDoudianShopPage(profile, DOUDIAN_NEWCOMER_GIFT_CREATE_URL, newcomerGiftPageOptions());
   page.setDefaultTimeout(10_000);
   await page.waitForLoadState('domcontentloaded');
   const activityNameInput = activityNameField(page);
@@ -36,6 +40,7 @@ export async function submitNewcomerGiftTask(profile: ShopAuthStorage, draft: Ne
     await step('提交新人礼金', () => submitNewcomerGift(page));
   } catch (caught) {
     const screenshotPath = await saveFailureScreenshot(page, draft.activityName);
+    await page.close().catch(() => undefined);
     const message = caught instanceof Error ? caught.message : '新人礼金填写失败';
     throw new Error(`${message}，截图：${screenshotPath}`);
   }

@@ -13,6 +13,12 @@ describe('应用侧边栏', () => {
       endTime: '2026-10-01 23:59:59'
     });
   });
+  it('uses the same future time range for newcomer gifts', () => {
+    expect(defaultCouponTimeRange(new Date('2026-09-24T20:00:00'))).toEqual({
+      startTime: '2026-09-25 00:00:00',
+      endTime: '2026-10-01 23:59:59'
+    });
+  });
   it('显示视频抽帧入口', () => {
     const markup = renderToStaticMarkup(<App />);
 

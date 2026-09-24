@@ -14,6 +14,17 @@ export type DoudianDateTime = {
   seconds: number;
 };
 
+export function calendarMonthOffset(
+  from: Pick<DoudianDateTime, 'year' | 'month'>,
+  to: Pick<DoudianDateTime, 'year' | 'month'>
+) {
+  return (to.year - from.year) * 12 + to.month - from.month;
+}
+
+function calendarMonthKey(value: Pick<DoudianDateTime, 'year' | 'month'>) {
+  return calendarMonthOffset({ year: 0, month: 1 }, value);
+}
+
 export function parseDoudianDateTime(value: string): DoudianDateTime {
   if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) {
     throw new Error(`时间格式不正确：${value}`);
@@ -37,14 +48,14 @@ export async function fillDoudianDateTimeRange(page: Page, startTime: string, en
   await page.locator('.arco-picker-range input[placeholder="开始日期"], input[placeholder="开始日期"]').first().click();
   await clickCalendarDate(page, start);
   await clickCalendarDate(page, end);
-  await page.getByText('选择时间', { exact: true }).last().click();
+  await page.locator('.arco-picker-btn-select-time:visible').last().click();
   await selectTime(page, 0, start.hours);
   await selectTime(page, 1, start.minutes);
   await selectTime(page, 2, start.seconds);
   await selectTime(page, 3, end.hours);
   await selectTime(page, 4, end.minutes);
   await selectTime(page, 5, end.seconds);
-  await page.getByText('确定', { exact: true }).last().click();
+  await page.locator('.arco-picker-btn-confirm:visible').last().click();
   await page.waitForTimeout(500);
 
   const values = await page.locator('.arco-picker-range input:visible, input[placeholder="开始日期"]:visible, input[placeholder="结束日期"]:visible').evaluateAll((inputs) =>
@@ -56,8 +67,9 @@ export async function fillDoudianDateTimeRange(page: Page, startTime: string, en
 }
 
 async function clickCalendarDate(page: Page, date: DoudianDateTime) {
+  await moveCalendarToMonth(page, date);
   const panel = page
-    .locator('.arco-panel-date')
+    .locator('.arco-panel-date:visible')
     .filter({ hasText: `${date.year}年${date.month}月` })
     .first();
 
@@ -66,6 +78,34 @@ async function clickCalendarDate(page: Page, date: DoudianDateTime) {
     .filter({ hasText: new RegExp(`^${date.day}$`) })
     .first()
     .click();
+}
+
+async function moveCalendarToMonth(page: Page, target: Pick<DoudianDateTime, 'year' | 'month'>) {
+  const targetKey = calendarMonthKey(target);
+
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    const panels = page.locator('.arco-panel-date:visible');
+    const months = (await panels.allTextContents())
+      .map((text) => text.match(/(\d{4})年\s*(\d{1,2})月/))
+      .filter((match): match is RegExpMatchArray => Boolean(match))
+      .map((match) => ({ year: Number(match[1]), month: Number(match[2]) }));
+
+    if (months.some((month) => calendarMonthKey(month) === targetKey)) return;
+    if (months.length === 0) throw new Error(`日历月份未加载：${target.year}年${target.month}月`);
+
+    const minKey = Math.min(...months.map(calendarMonthKey));
+    const maxKey = Math.max(...months.map(calendarMonthKey));
+    const direction = targetKey > maxKey ? 'next' : targetKey < minKey ? 'previous' : undefined;
+    if (!direction) throw new Error(`日历无法定位：${target.year}年${target.month}月`);
+
+    const outerPanel = direction === 'next' ? panels.last() : panels.first();
+    const monthIcon = direction === 'next' ? 'arco-icon-right' : 'arco-icon-left';
+    const button = outerPanel.locator(`.arco-picker-header-icon:has(.${monthIcon})`).first();
+    await button.click();
+    await page.waitForTimeout(100);
+  }
+
+  throw new Error(`日历翻页超出范围：${target.year}年${target.month}月`);
 }
 
 async function selectTime(page: Page, columnIndex: number, value: number) {

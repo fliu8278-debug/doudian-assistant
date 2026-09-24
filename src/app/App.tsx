@@ -572,8 +572,8 @@ function NavIcon({ name }: { name: NavIconName }) {
 function NewcomerGiftWorkbench({ currentShop, shops }: { currentShop?: Shop; shops: Shop[] }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedShopId, setSelectedShopId] = useState(currentShop?.id ?? '');
-  const [startTime, setStartTime] = useState('2026-08-28 00:00:00');
-  const [endTime, setEndTime] = useState('2026-09-03 23:59:59');
+  const [startTime, setStartTime] = useState(() => defaultCouponTimeRange().startTime);
+  const [endTime, setEndTime] = useState(() => defaultCouponTimeRange().endTime);
   const [concurrency, setConcurrency] = useState(1);
   const [fileName, setFileName] = useState('');
   const [rawRows, setRawRows] = useState<RawImportRow[]>([]);
