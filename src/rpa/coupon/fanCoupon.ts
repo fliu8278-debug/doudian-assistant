@@ -199,10 +199,11 @@ async function submitCoupon(page: Page) {
   await button.scrollIntoViewIfNeeded();
   await button.click({ force: true });
   if (page.url().includes('/coupon/detail') && await button.isVisible().catch(() => false)) {
+    await page.waitForTimeout(500);
     await button.click({ force: true });
   }
   const confirm = page.locator('.semi-modal, .arco-modal, .semi-popover, .arco-popover').getByRole('button', { name: /确认|确定/ }).last();
-  if (await confirm.isVisible().catch(() => false)) await confirm.click();
+  await confirm.waitFor({ state: 'visible', timeout: 3_000 }).then(() => confirm.click({ force: true })).catch(() => undefined);
   await Promise.race([
     page.getByText(/成功|创建成功|提交成功/, { exact: false }).first().waitFor({ state: 'visible', timeout: 12_000 }),
     page.waitForURL((url) => !url.href.includes('/coupon/detail'), { timeout: 12_000 })
