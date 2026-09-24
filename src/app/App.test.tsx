@@ -1,12 +1,18 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import * as AppModule from './App';
-import { App, CouponWorkbench, ProductCouponWorkbench, ensurePageGroupExpanded, resolveVideoFramePreviewTask, resolveVideoFrameQueueProgress, VideoFrameRateWorkbench } from './App';
+import { App, CouponWorkbench, ProductCouponWorkbench, defaultCouponTimeRange, ensurePageGroupExpanded, resolveVideoFramePreviewTask, resolveVideoFrameQueueProgress, VideoFrameRateWorkbench } from './App';
 import { formatSearchAfterViewError, SearchAfterViewWorkbench } from './pages/search-after-view/SearchAfterViewWorkbench';
 import { scheduleShopToastDismissal, ShopList } from './pages/shops/ShopList';
 import type { VideoFrameBatchTask } from './videoFrameBatch';
 
 describe('应用侧边栏', () => {
+  it('uses a future default coupon time range', () => {
+    expect(defaultCouponTimeRange(new Date('2026-09-24T20:00:00'))).toEqual({
+      startTime: '2026-09-25 00:00:00',
+      endTime: '2026-10-01 23:59:59'
+    });
+  });
   it('显示视频抽帧入口', () => {
     const markup = renderToStaticMarkup(<App />);
 

@@ -853,8 +853,8 @@ function NewcomerGiftWorkbench({ currentShop, shops }: { currentShop?: Shop; sho
 export function CouponWorkbench({ currentShop, shops, kind = 'fan' }: { currentShop?: Shop; shops: Shop[]; kind?: 'fan' | 'product' | 'nationalSubsidy' }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedShopId, setSelectedShopId] = useState(currentShop?.id ?? '');
-  const [startTime, setStartTime] = useState('2026-08-28 00:00:00');
-  const [endTime, setEndTime] = useState('2026-09-03 23:59:59');
+  const [startTime, setStartTime] = useState(() => defaultCouponTimeRange().startTime);
+  const [endTime, setEndTime] = useState(() => defaultCouponTimeRange().endTime);
   const [concurrency, setConcurrency] = useState(1);
   const [fileName, setFileName] = useState('');
   const [rawRows, setRawRows] = useState<RawImportRow[]>([]);
@@ -1438,6 +1438,15 @@ function batchTimeError(startTime: string, endTime: string) {
   if (!isDateTimeText(endTime)) return '结束时间格式不正确';
   if (startTime >= endTime) return '结束时间必须晚于开始时间';
   return '';
+}
+
+export function defaultCouponTimeRange(now = new Date()) {
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+  return {
+    startTime: `${formatDateTime(start).slice(0, 10)} 00:00:00`,
+    endTime: `${formatDateTime(end).slice(0, 10)} 23:59:59`
+  };
 }
 
 function clampConcurrency(value: string) {

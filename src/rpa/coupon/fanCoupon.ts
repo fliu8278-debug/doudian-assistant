@@ -48,6 +48,7 @@ export async function submitFanCouponTask(profile: ShopAuthStorage, draft: FanCo
       return fanCouponSkipResult(caught.keyword);
     }
     const path = await saveFailureScreenshot(page, draft.couponName);
+    await page.close().catch(() => undefined);
     throw new Error(`${caught instanceof Error ? caught.message : '涨粉券填写失败'}，截图：${path}`);
   }
 }
