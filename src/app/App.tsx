@@ -726,9 +726,9 @@ function NewcomerGiftWorkbench({ currentShop, shops }: { currentShop?: Shop; sho
             并发窗口
             <input
               aria-label="并发窗口"
-              max={5}
+              disabled
+              max={1}
               min={1}
-              onChange={(event) => setConcurrency(clampConcurrency(event.target.value))}
               type="number"
               value={concurrency}
             />

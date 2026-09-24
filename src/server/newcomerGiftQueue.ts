@@ -23,6 +23,10 @@ export function newcomerGiftTaskGapMs() {
   return NEWCOMER_GIFT_TASK_GAP_MS;
 }
 
+export function newcomerGiftWorkerCount(_requested?: number) {
+  return DEFAULT_WORKER_CONCURRENCY;
+}
+
 export function enqueueNewcomerGiftBatch(
   db: AppDatabase,
   input: {
@@ -35,7 +39,7 @@ export function enqueueNewcomerGiftBatch(
   const batch = createNewcomerGiftBatch(db, input);
   if (!batch) throw new Error('创建新人礼金任务失败');
   cancelledBatches.delete(batch.id);
-  void runNewcomerGiftBatch(db, batch.id, input.concurrency ?? DEFAULT_WORKER_CONCURRENCY);
+  void runNewcomerGiftBatch(db, batch.id, newcomerGiftWorkerCount(input.concurrency));
   return batch;
 }
 
