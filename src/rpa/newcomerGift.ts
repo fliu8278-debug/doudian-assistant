@@ -28,6 +28,7 @@ export async function submitNewcomerGiftTask(profile: ShopAuthStorage, draft: Ne
   const activityNameInput = activityNameField(page);
   await activityNameInput.waitFor({ state: 'visible', timeout: 15_000 });
 
+  let submitting = false;
   try {
     await step('填写活动名称', () => fillInput(activityNameInput, draft.activityName));
     await step('填写活动时间', () => fillAllowanceTime(page, draft.startTime, draft.endTime));
@@ -37,10 +38,11 @@ export async function submitNewcomerGiftTask(profile: ShopAuthStorage, draft: Ne
     await step('添加指定商品', () => pickAllowanceProduct(page, draft.productSearchKeyword));
     await step('填写优惠金额', () => fillProductDiscount(page, draft.discountAmount));
     await step('核对新人礼金数据', () => assertNewcomerGiftDraft(page, draft));
+    submitting = true;
     await step('提交新人礼金', () => submitNewcomerGift(page));
   } catch (caught) {
     const screenshotPath = await saveFailureScreenshot(page, draft.activityName);
-    await page.close().catch(() => undefined);
+    await closeFailedNewcomerGiftPage(page, submitting);
     const message = caught instanceof Error ? caught.message : '新人礼金填写失败';
     throw new Error(`${message}，截图：${screenshotPath}`);
   }
@@ -50,6 +52,10 @@ export async function submitNewcomerGiftTask(profile: ShopAuthStorage, draft: Ne
     submitted: true,
     message: `已提交新人礼金：${draft.activityName}`
   };
+}
+
+export async function closeFailedNewcomerGiftPage(page: Page, submitting: boolean) {
+  if (!submitting) await page.close().catch(() => undefined);
 }
 
 async function step(label: string, action: () => Promise<void>) {

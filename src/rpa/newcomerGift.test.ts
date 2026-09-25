@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Page } from 'playwright';
-import { closeSubmittedPage, newcomerGiftPageOptions, waitForSubmitJump } from './newcomerGift';
+import { closeFailedNewcomerGiftPage, closeSubmittedPage, newcomerGiftPageOptions, waitForSubmitJump } from './newcomerGift';
 
 describe('新人礼金页面', () => {
   it('reuses the shop page instead of opening another tab', () => {
@@ -29,6 +29,12 @@ describe('新人礼金页面', () => {
     } as unknown as Page;
 
     await expect(closeSubmittedPage(page)).rejects.toThrow('destination still loading');
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it('keeps the form open when submission fails', async () => {
+    const close = vi.fn();
+    await closeFailedNewcomerGiftPage({ close } as unknown as Page, true);
     expect(close).not.toHaveBeenCalled();
   });
 });
