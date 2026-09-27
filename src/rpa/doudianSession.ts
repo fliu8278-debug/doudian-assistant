@@ -25,7 +25,9 @@ export async function launchShopContext(
   try {
     return await launch(profile.profilePath, { headless });
   } catch {
-    return launch(appDataPath('runtime-profiles', profile.shopId), { headless });
+    const context = await launch(appDataPath('runtime-profiles', profile.shopId), { headless });
+    await loadShopCookies(context, profile);
+    return context;
   }
 }
 
@@ -122,7 +124,6 @@ async function getOrStartContext(binding: ContextBinding) {
       activeContexts.delete(binding.shopId);
       activeContextBindings.delete(binding.shopId);
     });
-    await loadShopCookies(context, binding);
     return context;
   }).finally(() => {
     const starting = startingContexts.get(binding.shopId);
