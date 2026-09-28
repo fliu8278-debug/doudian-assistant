@@ -20,6 +20,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npx playwright install chromium
       - run: npm test
       - run: npm run typecheck
       - name: Verify release configuration
