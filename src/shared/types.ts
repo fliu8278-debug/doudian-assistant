@@ -90,6 +90,7 @@ export type CouponBatch = {
   successCount: number;
   failedCount: number;
   status: CouponBatchStatus;
+  kind: 'fan' | 'product' | 'national' | 'legacy';
   createdAt: string;
   tasks: CouponTask[];
 };

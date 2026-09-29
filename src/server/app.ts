@@ -10,7 +10,9 @@ import { productCouponsRouter } from './routes/productCoupons';
 import { searchAfterViewRouter } from './routes/searchAfterView';
 import { shopsRouter } from './routes/shops';
 import { createVideoFrameExtractionRouter } from './routes/videoFrameExtraction';
+import { executionRecordsRouter } from './routes/executionRecords';
 import { VideoFrameExtractionManager } from './videoFrameExtraction';
+import { db } from './db';
 export { closeDoudianShopContexts } from '../rpa/doudianSession';
 
 export type StartedServer = {
@@ -32,8 +34,10 @@ export function createApp(staticDir = defaultStaticDir()) {
   app.use('/api', searchAfterViewRouter);
   app.use('/api', createVideoFrameExtractionRouter(new VideoFrameExtractionManager({
     ffmpegPath: process.env.DOUDIAN_FFMPEG_PATH || resolve('vendor', 'ffmpeg', 'win32-x64', 'ffmpeg.exe'),
-    ffprobePath: process.env.DOUDIAN_FFPROBE_PATH || resolve('vendor', 'ffmpeg', 'win32-x64', 'ffprobe.exe')
+    ffprobePath: process.env.DOUDIAN_FFPROBE_PATH || resolve('vendor', 'ffmpeg', 'win32-x64', 'ffprobe.exe'),
+    db
   })));
+  app.use('/api', executionRecordsRouter);
 
   if (existsSync(staticDir)) {
     app.use(express.static(staticDir));

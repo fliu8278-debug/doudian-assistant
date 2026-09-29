@@ -405,6 +405,50 @@ button:disabled {
   margin-bottom: 16px;
 }
 
+.executionRecordsPage .workspaceSummary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.executionRecordList { display: grid; gap: 10px; }
+.executionRecordCard { overflow: hidden; }
+.executionRecordSummary { display: grid; grid-template-columns: minmax(170px, 1.2fr) auto minmax(180px, 1fr) auto; gap: 14px; width: 100%; height: auto; min-height: 68px; align-items: center; border: 0; background: transparent; padding: 16px 18px; color: #273d59; text-align: left; cursor: pointer; }
+.executionRecordSummary:hover { background: #f7faff; }
+.executionRecordTitle { display: grid; gap: 4px; }
+.executionRecordTitle b { color: #1769e0; font-size: 12px; }
+.executionRecordTitle strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.executionRecordStatus { border-radius: 999px; padding: 4px 9px; background: #edf2f7; color: #64768e; font-size: 12px; white-space: nowrap; }
+.executionRecordStatus.success, .executionRecordStatus.complete { background: #e8f7ef; color: #22875c; }
+.executionRecordStatus.running { background: #eaf3ff; color: #1769e0; }
+.executionRecordStatus.failed, .executionRecordStatus.interrupted { background: #fff0f0; color: #c73535; }
+.executionRecordMeta { color: #75849a; font-size: 12px; }
+.executionRecordDetails { border-top: 1px solid #edf1f5; padding: 12px 18px 16px 28px; color: #5d7089; font-size: 13px; }
+.executionDetailStats { display: flex; gap: 14px; margin-bottom: 11px; color: #74859a; font-size: 12px; }
+.executionDetailStats b { color: #304b69; font-size: 14px; }
+.executionDetailLabel { display: block; margin-bottom: 7px; color: #71839a; font-size: 12px; font-weight: 700; }
+.executionSkuBlock { margin-bottom: 13px; }
+.executionSkuList { display: flex; flex-wrap: wrap; gap: 6px; }
+.executionSku, .executionSkuMore { border: 1px solid #dbe6f2; border-radius: 999px; background: #f7faff; padding: 4px 9px; color: #285783; font-size: 12px; font-variant-numeric: tabular-nums; }
+.executionSkuMore { background: #eef3f8; color: #71839a; }
+.executionFailureList { display: grid; gap: 4px; }
+.executionRecordDetails p { margin: 0 0 10px; }
+.executionNoFailures { color: #27815f; }
+.executionTask { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; }
+.executionRecordDialogBackdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: rgba(24, 40, 58, .42); }
+.executionRecordDialog { display: flex; width: min(700px, calc(100vw - 40px)); max-height: min(720px, calc(100vh - 40px)); flex-direction: column; overflow: hidden; border: 1px solid #dbe5ef; border-radius: 16px; background: #fff; box-shadow: 0 24px 70px rgba(20, 38, 60, .28); }
+.executionRecordDialogHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 20px 22px 16px; border-bottom: 1px solid #e8eef5; }
+.executionRecordDialogHeader span { color: #1769e0; font-size: 12px; font-weight: 700; }
+.executionRecordDialogHeader h2 { margin: 5px 0 4px; color: #203750; font-size: 19px; }
+.executionRecordDialogHeader p { margin: 0; color: #71839a; font-size: 12px; }
+.executionRecordDialogClose { display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #71839a; font-size: 22px; line-height: 1; }
+.executionRecordDialogClose:hover { background: #f1f5fa; color: #203750; }
+.executionRecordDialogBody { min-height: 0; overflow: auto; padding: 0 22px 18px; }
+.executionRecordDialogBody .executionRecordDetails { border-top: 0; padding: 16px 0 0; }
+.executionRecordDialogFooter { display: flex; justify-content: flex-end; padding: 12px 22px; border-top: 1px solid #e8eef5; background: #f7faff; }
+.executionPagination { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 16px 0 6px; color: #6d7e94; font-size: 12px; }
+.executionPagination button { min-width: 72px; height: 34px; }
+@media (max-width: 760px) {
+  .executionRecordsPage .workspaceSummary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .executionRecordSummary { grid-template-columns: minmax(0, 1fr) auto; }
+  .executionRecordMeta { grid-column: 1 / -1; }
+}
+
 .workspaceSummary div {
   min-height: 86px;
   padding: 14px;

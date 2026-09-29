@@ -4,11 +4,9 @@ import { openDoudianShopPage } from '../doudianSession';
 import type { ShopAuthStorage } from '../../db/shops';
 import { fanCouponSelectors, productCouponSelectors } from './selectors';
 import type { Locator, Page } from 'playwright';
-import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
 import { selectableProductRows, type ProductSelectionMode } from '../priceRange';
-import { appDataPath } from '../../paths';
 import { fillDoudianDateTimeRange } from './timePicker';
+import { formatAutomationError } from '../errorMessage';
 
 export type ProductCouponDraft = CouponRow & {
   shopId: string;
@@ -29,21 +27,21 @@ export async function submitProductCouponTask(
   const { page } = await openDoudianShopPage(profile, DOUDIAN_PRODUCT_COUPON_CREATE_URL, { headless: false, newPage: true });
   const selectionMode = draft.selectionMode ?? 'nonSelfOperated';
   page.setDefaultTimeout(15_000);
-  await page.waitForLoadState('domcontentloaded');
-  await waitForCouponForm(page);
-  if (await isDoudianLoginPage(page)) {
-    throw new Error('自动化浏览器未登录：请先在弹出的 Chromium 店铺窗口完成登录并保存登录状态');
-  }
-
-  const warmup = await inspectFanCouponCreatePage(page);
-  if (!warmup.ready && await isDoudianLoginPage(page)) {
-    throw new Error('自动化浏览器未登录：请先在弹出的 Chromium 店铺窗口完成登录并保存登录状态');
-  }
-  if (!warmup.ready) {
-    throw new Error(`商品优惠券创建页未就绪：${warmup.missing.join('、')}，当前URL：${page.url()}`);
-  }
-
   try {
+    await step('加载商品券页面', async () => {
+      await page.waitForLoadState('domcontentloaded');
+      await waitForCouponForm(page);
+      if (await isDoudianLoginPage(page)) {
+        throw new Error('自动化浏览器未登录：请先在弹出的 Chromium 店铺窗口完成登录并保存登录状态');
+      }
+      const warmup = await inspectFanCouponCreatePage(page);
+      if (!warmup.ready && await isDoudianLoginPage(page)) {
+        throw new Error('自动化浏览器未登录：请先在弹出的 Chromium 店铺窗口完成登录并保存登录状态');
+      }
+      if (!warmup.ready) {
+        throw new Error(`商品优惠券创建页未就绪：${warmup.missing.join('、')}`);
+      }
+    });
     const pacedStep = async (label: string, action: () => Promise<void>) => {
       await step(label, action);
       await page.waitForTimeout(PRODUCT_COUPON_STEP_DELAY_MS);
@@ -63,10 +61,8 @@ export async function submitProductCouponTask(
     await pacedStep('添加指定商品', () => pickProduct(page, draft.productSearchKeyword || draft.sku, selectionMode));
     await pacedStep('核对建券数据', () => assertCouponDraft(page, draft));
   } catch (caught) {
-    const screenshotPath = await saveFailureScreenshot(page, draft.couponName);
     await page.close().catch(() => undefined);
-    const message = caught instanceof Error ? caught.message : '建券填写失败';
-    throw new Error(`${message}，截图：${screenshotPath}`);
+    throw new Error(formatAutomationError(caught, '建券填写失败'));
   }
 
   if (options.autoSubmit === false) {
@@ -84,19 +80,11 @@ export async function submitProductCouponTask(
   };
 }
 
-async function saveFailureScreenshot(page: Page, couponName: string) {
-  const dir = appDataPath('screenshots');
-  mkdirSync(dir, { recursive: true });
-  const path = join(dir, `coupon-${couponName}-failed-${Date.now()}.png`);
-  await page.screenshot({ path, fullPage: true }).catch(() => undefined);
-  return path;
-}
-
 async function step(label: string, action: () => Promise<void>) {
   try {
     await action();
   } catch (caught) {
-    const message = caught instanceof Error ? caught.message : '未知错误';
+    const message = formatAutomationError(caught, '未知错误');
     throw new Error(`${label}失败：${message}`);
   }
 }

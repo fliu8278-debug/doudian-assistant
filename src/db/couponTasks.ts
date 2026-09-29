@@ -10,6 +10,7 @@ type CouponBatchRow = {
   success_count: number;
   failed_count: number;
   status: CouponBatchStatus;
+  kind?: 'fan' | 'product' | 'national' | 'legacy';
   created_at: string;
 };
 
@@ -41,6 +42,7 @@ export function createCouponBatch(
     shopId: string;
     fileName: string;
     rows: CouponRow[];
+    kind?: 'fan' | 'product' | 'national';
   }
 ) {
   ensureCouponTaskColumns(db);
@@ -51,9 +53,9 @@ export function createCouponBatch(
   try {
     db.prepare(`
       insert into coupon_batches (
-        id, shop_id, file_name, total_count, success_count, failed_count, status, created_at
-      ) values (?, ?, ?, ?, 0, 0, 'pending', ?)
-    `).run(batchId, input.shopId, input.fileName, input.rows.length, now);
+        id, shop_id, file_name, total_count, success_count, failed_count, status, kind, created_at
+      ) values (?, ?, ?, ?, 0, 0, 'pending', ?, ?)
+    `).run(batchId, input.shopId, input.fileName, input.rows.length, input.kind ?? 'legacy', now);
 
     const insertTask = db.prepare(`
       insert into coupon_tasks (
@@ -172,6 +174,7 @@ function mapBatch(row: CouponBatchRow, tasks: CouponTask[]): CouponBatch {
     successCount: row.success_count,
     failedCount: row.failed_count,
     status: row.status,
+    kind: row.kind ?? 'legacy',
     createdAt: row.created_at,
     tasks
   };
@@ -202,6 +205,8 @@ function mapTask(row: CouponTaskRow): CouponTask {
 }
 
 function ensureCouponTaskColumns(db: AppDatabase) {
+  const batchColumns = db.prepare('pragma table_info(coupon_batches)').all().map((row) => (row as { name: string }).name);
+  if (!batchColumns.includes('kind')) db.prepare("alter table coupon_batches add column kind text not null default 'legacy'").run();
   const columns = db
     .prepare('pragma table_info(coupon_tasks)')
     .all()

@@ -4,11 +4,9 @@ import { openDoudianShopPage } from '../doudianSession';
 import type { ShopAuthStorage } from '../../db/shops';
 import { fanCouponSelectors } from './selectors';
 import type { Locator, Page } from 'playwright';
-import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
 import { shouldSelectProductRow } from '../priceRange';
-import { appDataPath } from '../../paths';
 import { fillDoudianDateTimeRange } from './timePicker';
+import { formatAutomationError } from '../errorMessage';
 
 export type FanCouponDraft = CouponRow & { shopId: string };
 export type SubmitFanCouponOptions = { autoSubmit?: boolean };
@@ -22,22 +20,24 @@ export async function submitFanCouponTask(profile: ShopAuthStorage, draft: FanCo
   const { page } = await openDoudianShopPage(profile, DOUDIAN_FAN_COUPON_CREATE_URL, { headless: false, newPage: true });
   page.setDefaultTimeout(FAN_COUPON_STEP_TIMEOUT_MS);
   try {
-    await page.waitForLoadState('domcontentloaded');
-    if (await isLoginPage(page)) throw new Error('自动化浏览器未登录：请先在店铺窗口完成登录并保存登录状态');
-    await couponNameField(page).waitFor({ state: 'visible', timeout: FAN_COUPON_DIRECT_ENTRY_TIMEOUT_MS });
-    await fill(couponNameField(page), draft.couponName);
-    await chooseFormOption(page, '涨粉账号', '店铺官方账号');
-    await chooseFormOption(page, '使用时间', '限制有效天数');
-    await fill(validPeriodField(page), String(draft.validDays));
-    await fillReceiveTime(page, draft.startTime, draft.endTime);
-    await chooseFormOption(page, '自动续期', '不开启');
-    await chooseSelect(page, fanCouponSelectors.discountType, '满减');
-    await fillDiscountAmount(page, draft.thresholdAmount, draft.discountAmount);
-    await chooseSelect(page, fanCouponSelectors.totalAmountType, '不限');
-    await choosePerUserLimit(page);
-    await chooseFormOption(page, '商品范围', '指定商品');
-    await pickProduct(page, draft.productSearchKeyword || draft.sku);
-    await assertCouponDraft(page, draft);
+    await step('加载涨粉券页面', async () => {
+      await page.waitForLoadState('domcontentloaded');
+      if (await isLoginPage(page)) throw new Error('自动化浏览器未登录：请先在店铺窗口完成登录并保存登录状态');
+      await couponNameField(page).waitFor({ state: 'visible', timeout: FAN_COUPON_DIRECT_ENTRY_TIMEOUT_MS });
+    });
+    await step('填写优惠券名称', () => fill(couponNameField(page), draft.couponName));
+    await step('选择涨粉账号', () => chooseFormOption(page, '涨粉账号', '店铺官方账号'));
+    await step('选择使用时间', () => chooseFormOption(page, '使用时间', '限制有效天数'));
+    await step('填写有效天数', () => fill(validPeriodField(page), String(draft.validDays)));
+    await step('填写领取时间', () => fillReceiveTime(page, draft.startTime, draft.endTime));
+    await step('设置自动续期', () => chooseFormOption(page, '自动续期', '不开启'));
+    await step('选择优惠方式', () => chooseSelect(page, fanCouponSelectors.discountType, '满减'));
+    await step('填写满减金额', () => fillDiscountAmount(page, draft.thresholdAmount, draft.discountAmount));
+    await step('选择发放量', () => chooseSelect(page, fanCouponSelectors.totalAmountType, '不限'));
+    await step('选择每人限领', () => choosePerUserLimit(page));
+    await step('选择商品范围', () => chooseFormOption(page, '商品范围', '指定商品'));
+    await step('添加指定商品', () => pickProduct(page, draft.productSearchKeyword || draft.sku));
+    await step('核对涨粉券数据', () => assertCouponDraft(page, draft));
     if (options.autoSubmit === false) return { submitted: false, message: `已填好并停在提交前：${draft.couponName}` };
     await submitCoupon(page);
     await page.close().catch(() => undefined);
@@ -47,9 +47,16 @@ export async function submitFanCouponTask(profile: ShopAuthStorage, draft: FanCo
       await page.close().catch(() => undefined);
       return fanCouponSkipResult(caught.keyword);
     }
-    const path = await saveFailureScreenshot(page, draft.couponName);
     await page.close().catch(() => undefined);
-    throw new Error(`${caught instanceof Error ? caught.message : '涨粉券填写失败'}，截图：${path}`);
+    throw new Error(formatAutomationError(caught, '涨粉券填写失败'));
+  }
+}
+
+async function step(label: string, action: () => Promise<void>) {
+  try {
+    await action();
+  } catch (caught) {
+    throw new Error(`${label}失败：${formatAutomationError(caught, '涨粉券填写失败')}`);
   }
 }
 
@@ -210,12 +217,4 @@ async function submitCoupon(page: Page) {
     page.waitForURL((url) => !url.href.includes('/coupon/detail'), { timeout: 12_000 })
   ]);
   if (page.url().includes('/coupon/detail')) throw new Error('提交后没有确认成功，已保留页面等待检查');
-}
-
-async function saveFailureScreenshot(page: Page, name: string) {
-  const dir = appDataPath('screenshots');
-  mkdirSync(dir, { recursive: true });
-  const path = join(dir, `fan-coupon-${name}-failed-${Date.now()}.png`);
-  await page.screenshot({ path, fullPage: true }).catch(() => undefined);
-  return path;
 }

@@ -12,6 +12,7 @@ import { closeDoudianShopPages } from '../rpa/doudianSession';
 import type { AppDatabase } from '../db/database';
 import type { NewcomerGiftBatch, NewcomerGiftRow } from '../shared/types';
 import { runWithConcurrency } from './couponQueue';
+import { formatAutomationError } from '../rpa/errorMessage';
 
 const runningBatches = new Set<string>();
 const cancelledBatches = new Set<string>();
@@ -76,7 +77,7 @@ async function runNewcomerGiftBatch(db: AppDatabase, batchId: string, concurrenc
 
     updateNewcomerGiftBatchStatus(db, batchId, finalBatchStatus(getNewcomerGiftBatch(db, batchId)));
   } catch (caught) {
-    failPendingNewcomerGiftTasks(db, batchId, caught instanceof Error ? caught.message : '新人礼金批次失败');
+    failPendingNewcomerGiftTasks(db, batchId, formatAutomationError(caught, '新人礼金批次失败'));
     updateNewcomerGiftBatchStatus(db, batchId, 'failed');
   } finally {
     runningBatches.delete(batchId);
@@ -117,7 +118,7 @@ async function runNewcomerGiftTask(
       db,
       task.id,
       'failed',
-      caught instanceof Error ? caught.message : '新人礼金任务失败'
+      formatAutomationError(caught, '新人礼金任务失败')
     );
   }
 }

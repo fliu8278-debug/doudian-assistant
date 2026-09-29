@@ -46,7 +46,22 @@ create table if not exists coupon_batches (
   success_count integer not null default 0,
   failed_count integer not null default 0,
   status text not null default 'pending',
+  kind text not null default 'legacy',
   created_at text not null
+);
+
+create table if not exists execution_runs (
+  id text primary key,
+  kind text not null,
+  title text not null,
+  status text not null,
+  total_count integer not null default 0,
+  success_count integer not null default 0,
+  failed_count integer not null default 0,
+  message text not null default '',
+  sku text not null default '',
+  created_at text not null,
+  updated_at text not null
 );
 
 create table if not exists coupon_tasks (

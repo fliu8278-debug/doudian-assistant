@@ -25,6 +25,20 @@ export type SearchAfterViewTask = {
   message: string;
 };
 
+export type ExecutionRecord = {
+  id: string;
+  kind: 'fan' | 'product' | 'national' | 'legacy' | 'newcomerGift' | 'searchAfterView' | 'videoFrameExtraction';
+  title: string;
+  status: string;
+  totalCount: number;
+  successCount: number;
+  failedCount: number;
+  createdAt: string;
+  updatedAt: string;
+  message: string;
+  tasks: Array<{ id: string; sku: string; status: string; message: string }>;
+};
+
 export async function getShops() {
   const response = await fetch('/api/shops');
   return readJson<Shop[]>(response);
@@ -180,6 +194,11 @@ export async function getSearchAfterViewTask(taskId: string) {
 export async function pauseSearchAfterViewTask(taskId: string) {
   const response = await fetch(`/api/search-after-view/${taskId}/pause`, { method: 'POST' });
   return readJson<SearchAfterViewTask>(response);
+}
+
+export async function getExecutionRecords() {
+  const response = await fetch('/api/execution-records');
+  return readJson<ExecutionRecord[]>(response);
 }
 
 async function readJson<T>(response: Response) {

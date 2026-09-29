@@ -45,6 +45,33 @@ export async function fillDoudianDateTimeRange(page: Page, startTime: string, en
   const start = parseDoudianDateTime(startTime);
   const end = parseDoudianDateTime(endTime);
 
+  await retryTimePickerAction(async (attempt) => {
+    if (attempt > 1) await page.keyboard.press('Escape').catch(() => undefined);
+    await fillDoudianDateTimeRangeOnce(page, start, end, startTime, endTime);
+  });
+}
+
+export async function retryTimePickerAction(action: (attempt: number) => Promise<void>, maxAttempts = 3) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await action(attempt);
+      return;
+    } catch (caught) {
+      lastError = caught;
+      if (attempt < maxAttempts) await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('时间选择失败');
+}
+
+async function fillDoudianDateTimeRangeOnce(
+  page: Page,
+  start: DoudianDateTime,
+  end: DoudianDateTime,
+  startTime: string,
+  endTime: string
+) {
   await page.locator('.arco-picker-range input[placeholder="开始日期"], input[placeholder="开始日期"]').first().click();
   await clickCalendarDate(page, start);
   await clickCalendarDate(page, end);

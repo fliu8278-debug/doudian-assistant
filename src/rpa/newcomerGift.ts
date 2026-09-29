@@ -1,12 +1,10 @@
-import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
 import type { Locator, Page } from 'playwright';
 import type { ShopAuthStorage } from '../db/shops';
-import { appDataPath } from '../paths';
 import { DOUDIAN_NEWCOMER_GIFT_CREATE_URL } from './browser';
 import { openDoudianShopPage } from './doudianSession';
 import { selectableProductRows } from './priceRange';
 import { fillDoudianDateTimeRange } from './coupon/timePicker';
+import { formatAutomationError } from './errorMessage';
 
 export type NewcomerGiftDraft = {
   shopId: string;
@@ -24,12 +22,14 @@ export function newcomerGiftPageOptions() {
 export async function submitNewcomerGiftTask(profile: ShopAuthStorage, draft: NewcomerGiftDraft) {
   const { page } = await openDoudianShopPage(profile, DOUDIAN_NEWCOMER_GIFT_CREATE_URL, newcomerGiftPageOptions());
   page.setDefaultTimeout(10_000);
-  await page.waitForLoadState('domcontentloaded');
   const activityNameInput = activityNameField(page);
-  await activityNameInput.waitFor({ state: 'visible', timeout: 15_000 });
 
   let submitting = false;
   try {
+    await step('加载新人礼金页面', async () => {
+      await page.waitForLoadState('domcontentloaded');
+      await activityNameInput.waitFor({ state: 'visible', timeout: 15_000 });
+    });
     await step('填写活动名称', () => fillInput(activityNameInput, draft.activityName));
     await step('填写活动时间', () => fillAllowanceTime(page, draft.startTime, draft.endTime));
     await step('固定自动续期不开启', () => chooseRadioGroup(page, '自动续期', '不开启', '#auto_renewal'));
@@ -41,10 +41,8 @@ export async function submitNewcomerGiftTask(profile: ShopAuthStorage, draft: Ne
     submitting = true;
     await step('提交新人礼金', () => submitNewcomerGift(page));
   } catch (caught) {
-    const screenshotPath = await saveFailureScreenshot(page, draft.activityName);
     await closeFailedNewcomerGiftPage(page, submitting);
-    const message = caught instanceof Error ? caught.message : '新人礼金填写失败';
-    throw new Error(`${message}，截图：${screenshotPath}`);
+    throw new Error(formatAutomationError(caught, '新人礼金填写失败'));
   }
 
   await closeSubmittedPage(page);
@@ -62,7 +60,7 @@ async function step(label: string, action: () => Promise<void>) {
   try {
     await action();
   } catch (caught) {
-    const message = caught instanceof Error ? caught.message : '未知错误';
+    const message = formatAutomationError(caught, '未知错误');
     throw new Error(`${label}失败：${message}`);
   }
 }
@@ -238,13 +236,14 @@ async function assertNewcomerGiftDraft(page: Page, draft: NewcomerGiftDraft) {
 async function submitNewcomerGift(page: Page) {
   await clickNewcomerGiftSubmit(page);
   await clickSubmitConfirmIfPresent(page);
-  if (await waitForSubmitJump(page)) return;
-
+  // 与涨粉券一致：提交按钮第一次点击未触发跳转时，短暂等待后立即补点一次。
   if (await shouldRetrySubmit(page)) {
+    await page.waitForTimeout(500);
     await clickNewcomerGiftSubmit(page);
     await clickSubmitConfirmIfPresent(page);
-    if (await waitForSubmitJump(page)) return;
   }
+
+  if (await waitForSubmitJump(page)) return;
 
   const errorText = await page.locator('.semi-toast-content, .semi-notification-notice-content, .arco-message, .arco-notification').last().textContent().catch(() => '');
   if (errorText && /失败|错误|不能为空|请选择|不能|未/.test(errorText)) {
@@ -277,7 +276,9 @@ export async function waitForSubmitJump(page: Page) {
 export async function closeSubmittedPage(page: Page) {
   if (page.isClosed()) return;
   await page.waitForLoadState('load', { timeout: 12_000 });
+  const context = page.context();
   await page.close({ runBeforeUnload: false });
+  if (context.pages().length === 0) await context.newPage();
 }
 
 async function clickNewcomerGiftSubmit(page: Page) {
@@ -327,12 +328,4 @@ function parseDateTime(value: string) {
   const date = new Date(value.replace(' ', 'T'));
   if (Number.isNaN(date.getTime())) throw new Error(`时间格式不正确：${value}`);
   return date;
-}
-
-async function saveFailureScreenshot(page: Page, activityName: string) {
-  const dir = appDataPath('screenshots');
-  mkdirSync(dir, { recursive: true });
-  const path = join(dir, `newcomer-gift-${activityName}-failed-${Date.now()}.png`);
-  await page.screenshot({ path, fullPage: true }).catch(() => undefined);
-  return path;
 }

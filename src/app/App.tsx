@@ -7,6 +7,7 @@ import { createCouponBatch, createNewcomerGiftBatch, createProductCouponBatch, c
 import { UpdateDialog } from './components/UpdateDialog';
 import { ShopList } from './pages/shops/ShopList';
 import { SearchAfterViewWorkbench } from './pages/search-after-view/SearchAfterViewWorkbench';
+import { ExecutionRecords } from './pages/execution-records/ExecutionRecords';
 import { updateActionLabel, useUpdater, type UpdateState } from './updater';
 import { runVideoFrameBatch, type VideoFrameBatchTask } from './videoFrameBatch';
 
@@ -250,15 +251,7 @@ export function App() {
             title="表格模板"
           />
         ) : page === 'executionRecords' ? (
-          <WorkspacePlaceholder
-            actionLabel="刷新记录"
-            breadcrumb="记录 / 执行记录"
-            description="查看营销、商品和视频任务的执行历史。"
-            emptyDescription="开始执行任务后，历史记录会显示在这里。"
-            emptyTitle="还没有执行记录"
-            summary={[{ label: '今日执行', value: '0' }, { label: '已完成', value: '0' }, { label: '执行中', value: '0' }]}
-            title="执行记录"
-          />
+          <ExecutionRecords />
         ) : page === 'settings' ? (
           <SettingsWorkbench onCheck={updateAction} onSetBackground={(enabled) => void updater.setBackground(enabled)} state={updater.state} />
         ) : (

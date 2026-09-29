@@ -37,4 +37,20 @@ describe('新人礼金页面', () => {
     await closeFailedNewcomerGiftPage({ close } as unknown as Page, true);
     expect(close).not.toHaveBeenCalled();
   });
+
+  it('keeps the persistent shop window alive after closing the completed page', async () => {
+    const close = vi.fn();
+    const newPage = vi.fn();
+    const page = {
+      isClosed: () => false,
+      waitForLoadState: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockImplementation(close),
+      context: () => ({ pages: () => [], newPage })
+    } as unknown as Page;
+
+    await closeSubmittedPage(page);
+
+    expect(close).toHaveBeenCalledWith({ runBeforeUnload: false });
+    expect(newPage).toHaveBeenCalledTimes(1);
+  });
 });

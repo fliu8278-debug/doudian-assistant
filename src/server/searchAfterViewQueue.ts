@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { SearchAfterViewRowError, type SearchAfterViewResult } from '../rpa/searchAfterView';
+import type { AppDatabase } from '../db/database';
+import { saveExecutionRun } from '../db/executionRecords';
 
 export type SearchAfterViewTaskStatus = 'running' | 'paused' | 'complete' | 'failed';
 
@@ -42,7 +44,7 @@ export class SearchAfterViewQueue {
   private activeTaskByShop = new Map<string, string>();
   private entries = new Map<string, Entry>();
 
-  constructor(private readonly runOne: RunOne) {}
+  constructor(private readonly runOne: RunOne, private readonly db?: AppDatabase) {}
 
   start(input: SearchAfterViewTaskInput) {
     const activeTaskId = this.activeTaskByShop.get(input.shopId);
@@ -63,6 +65,7 @@ export class SearchAfterViewQueue {
     const entry: Entry = { controller, task, done: Promise.resolve() };
     this.entries.set(task.id, entry);
     this.activeTaskByShop.set(task.shopId, task.id);
+    this.persist(task);
     entry.done = this.run(entry, input);
     return this.copy(task);
   }
@@ -100,6 +103,7 @@ export class SearchAfterViewQueue {
               entry.task.currentVideoId = target.videoId;
               entry.task.currentSku = target.sku;
               entry.task.message = `正在配置视频 ${target.videoId}（款号 ${target.sku}）`;
+              this.persist(entry.task);
             }
           );
         } catch (caught) {
@@ -108,6 +112,7 @@ export class SearchAfterViewQueue {
             entry.task.errors += 1;
             if (!skippedVideoIds.includes(caught.videoId)) skippedVideoIds.push(caught.videoId);
             entry.task.message = `视频 ${caught.videoId} 配置失败：${caught.message}；已跳过并继续下一条`;
+            this.persist(entry.task);
             continue;
           }
           throw caught;
@@ -116,27 +121,47 @@ export class SearchAfterViewQueue {
         if (!result) {
           entry.task.status = 'complete';
           entry.task.message = entry.task.configured ? '没有更多待配置视频' : '没有找到可配置视频';
+          this.persist(entry.task);
           return;
         }
         if (!skippedVideoIds.includes(result.videoId)) skippedVideoIds.push(result.videoId);
         entry.task.configured += 1;
         entry.task.currentSku = result.sku;
         entry.task.message = `${result.sku} 已提交，继续配置下一条`;
+        this.persist(entry.task);
       }
       entry.task.status = 'paused';
       entry.task.message = '任务已暂停，当前条未提交';
+      this.persist(entry.task);
     } catch (caught) {
       if (!entry.controller.signal.aborted) {
         entry.task.status = 'failed';
         entry.task.errors += 1;
         entry.task.message = caught instanceof Error ? caught.message : '看后搜配置失败';
+        this.persist(entry.task);
         return;
       }
       entry.task.status = 'paused';
       entry.task.message = '任务已暂停，当前条未提交';
+      this.persist(entry.task);
     } finally {
       if (this.activeTaskByShop.get(entry.task.shopId) === entry.task.id) this.activeTaskByShop.delete(entry.task.shopId);
     }
+  }
+
+  private persist(task: SearchAfterViewTask) {
+    if (!this.db) return;
+    saveExecutionRun(this.db, {
+      id: task.id,
+      kind: 'searchAfterView',
+      title: '看后搜',
+      status: task.status,
+      totalCount: task.configured + task.errors,
+      successCount: task.configured,
+      failedCount: task.errors,
+      sku: task.currentSku ?? '',
+      message: task.message
+    });
   }
 
   private copy(task: SearchAfterViewTask): SearchAfterViewTask {

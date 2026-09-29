@@ -97,6 +97,12 @@ export function getNewcomerGiftBatch(db: AppDatabase, batchId: string) {
   return mapBatch(row, listNewcomerGiftTasks(db, batchId));
 }
 
+export function listRecentNewcomerGiftBatches(db: AppDatabase, limit = 10) {
+  return db.prepare('select * from newcomer_gift_batches order by created_at desc limit ?')
+    .all(limit)
+    .map((row) => mapBatch(row as NewcomerGiftBatchRow, listNewcomerGiftTasks(db, (row as NewcomerGiftBatchRow).id)));
+}
+
 export function listPendingNewcomerGiftTasks(db: AppDatabase, batchId: string) {
   return listNewcomerGiftTasks(db, batchId).filter((task) => task.status === 'pending');
 }

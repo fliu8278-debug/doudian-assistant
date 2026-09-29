@@ -7,7 +7,7 @@ import { SearchAfterViewQueue } from '../searchAfterViewQueue';
 const searchAfterViewQueue = new SearchAfterViewQueue(async (input, signal, onTarget) => {
   const profile = getShopAuthStorage(db, input.shopId);
   return submitSearchAfterViewTask(profile, input, { autoSubmit: true, signal, onTarget });
-});
+}, db);
 
 export function createSearchAfterViewRouter(queue = searchAfterViewQueue) {
   const router = Router();

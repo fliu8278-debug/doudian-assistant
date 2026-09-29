@@ -13,6 +13,7 @@ import type { CouponBatch, CouponRow } from '../shared/types';
 import type { AppDatabase } from '../db/database';
 import type { ProductSelectionMode } from '../rpa/priceRange';
 import type { FanCouponTaskResult } from '../rpa/coupon/fanCoupon';
+import { formatAutomationError } from '../rpa/errorMessage';
 
 const runningBatches = new Set<string>();
 const cancelledBatches = new Set<string>();
@@ -60,7 +61,7 @@ function enqueueCouponBatchKind(
   kind: 'fan' | 'product',
   selectionMode: ProductSelectionMode = 'nonSelfOperated'
 ) {
-  const batch = createCouponBatch(db, input);
+  const batch = createCouponBatch(db, { ...input, kind: kind === 'fan' ? 'fan' : selectionMode === 'selfOperated' ? 'national' : 'product' });
   if (!batch) throw new Error('创建优惠券任务失败');
   cancelledBatches.delete(batch.id);
   void runCouponBatch(db, batch.id, input.concurrency ?? DEFAULT_COUPON_WORKER_CONCURRENCY, kind, selectionMode);
@@ -96,7 +97,7 @@ async function runCouponBatch(db: AppDatabase, batchId: string, concurrency: num
 
     updateCouponBatchStatus(db, batchId, finalBatchStatus(getCouponBatch(db, batchId)));
   } catch (caught) {
-    failPendingCouponTasks(db, batchId, caught instanceof Error ? caught.message : '建券批次失败');
+    failPendingCouponTasks(db, batchId, formatAutomationError(caught, '建券批次失败'));
     updateCouponBatchStatus(db, batchId, 'failed');
   } finally {
     runningBatches.delete(batchId);
@@ -135,7 +136,7 @@ async function runCouponTask(
       db,
       task.id,
       'failed',
-      caught instanceof Error ? caught.message : '建券任务失败'
+      formatAutomationError(caught, '建券任务失败')
     );
   }
 }

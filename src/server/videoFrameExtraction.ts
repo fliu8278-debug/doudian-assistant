@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, readdirSync, renameSync, rmdirSync, statSync, un
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { basename, join, parse } from 'node:path';
+import type { AppDatabase } from '../db/database';
+import { saveExecutionRun } from '../db/executionRecords';
 
 export type VideoFrameExtractionStatus = 'processing' | 'complete' | 'failed';
 export type FrameDropMode = 'random' | 'interval';
@@ -28,6 +30,7 @@ type ManagerOptions = {
   ffmpegPath: string;
   ffprobePath?: string;
   tempRoot?: string;
+  db?: AppDatabase;
 };
 
 type StartInput = {
@@ -41,11 +44,13 @@ export class VideoFrameExtractionManager {
   private readonly ffprobePath: string;
   private readonly jobs = new Map<string, StoredJob>();
   private readonly tempRoot: string;
+  private readonly db?: AppDatabase;
 
   constructor(options: ManagerOptions) {
     this.ffmpegPath = options.ffmpegPath;
     this.ffprobePath = options.ffprobePath ?? options.ffmpegPath.replace(/ffmpeg\.exe$/i, 'ffprobe.exe');
     this.tempRoot = options.tempRoot ?? join(tmpdir(), 'doudian-video-frame-extraction');
+    this.db = options.db;
     mkdirSync(this.tempRoot, { recursive: true });
     this.cleanupExpired();
   }
@@ -72,6 +77,7 @@ export class VideoFrameExtractionManager {
       directory
     };
     this.jobs.set(id, job);
+    this.persist(job);
     void this.process(job, inputPath);
     return this.toPublicJob(job);
   }
@@ -146,9 +152,11 @@ export class VideoFrameExtractionManager {
       job.status = 'complete';
       job.progress = 100;
       job.outputSize = output.size;
+      this.persist(job);
     } catch (error) {
       job.status = 'failed';
       job.error = error instanceof Error ? `处理失败：${error.message}` : '处理失败，请更换视频后重试';
+      this.persist(job);
     }
   }
 
@@ -224,6 +232,20 @@ export class VideoFrameExtractionManager {
   private toPublicJob(job: StoredJob): VideoFrameExtractionJob {
     const { outputPath: _outputPath, directory: _directory, ...publicJob } = job;
     return publicJob;
+  }
+
+  private persist(job: StoredJob) {
+    if (!this.db) return;
+    saveExecutionRun(this.db, {
+      id: job.id,
+      kind: 'videoFrameExtraction',
+      title: job.outputName,
+      status: job.status === 'processing' ? 'running' : job.status,
+      totalCount: 1,
+      successCount: job.status === 'complete' ? 1 : 0,
+      failedCount: job.status === 'failed' ? 1 : 0,
+      message: job.error ?? (job.status === 'complete' ? '处理完成' : '正在处理')
+    });
   }
 }
 
