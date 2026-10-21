@@ -53,7 +53,8 @@ export async function submitNewcomerGiftTask(profile: ShopAuthStorage, draft: Ne
 }
 
 export async function closeFailedNewcomerGiftPage(page: Page, submitting: boolean) {
-  if (!submitting) await page.close().catch(() => undefined);
+  // ponytail: 保留填写失败的现场；只有提交成功后的路径才关闭页面。
+  if (!submitting) await page.bringToFront().catch(() => undefined);
 }
 
 async function step(label: string, action: () => Promise<void>) {
@@ -233,14 +234,13 @@ async function assertNewcomerGiftDraft(page: Page, draft: NewcomerGiftDraft) {
   }
 }
 
-async function submitNewcomerGift(page: Page) {
+export async function submitNewcomerGift(page: Page) {
   await clickNewcomerGiftSubmit(page);
   await clickSubmitConfirmIfPresent(page);
   // 与涨粉券一致：提交按钮第一次点击未触发跳转时，短暂等待后立即补点一次。
   if (await shouldRetrySubmit(page)) {
     await page.waitForTimeout(500);
-    await clickNewcomerGiftSubmit(page);
-    await clickSubmitConfirmIfPresent(page);
+    if (await clickNewcomerGiftSubmit(page, true)) await clickSubmitConfirmIfPresent(page);
   }
 
   if (await waitForSubmitJump(page)) return;
@@ -268,32 +268,40 @@ export async function waitForSubmitJump(page: Page) {
   if (page.url().includes('/allowance/create')) {
     await page.waitForURL((url) => !url.href.includes('/allowance/create'), { timeout: 12_000 }).catch(() => undefined);
   }
-  if (page.url().includes('/allowance/create')) return false;
-  await page.waitForLoadState('load', { timeout: 12_000 });
-  return true;
+  return !page.url().includes('/allowance/create');
 }
 
 export async function closeSubmittedPage(page: Page) {
   if (page.isClosed()) return;
-  await page.waitForLoadState('load', { timeout: 12_000 });
-  const context = page.context();
-  await page.close({ runBeforeUnload: false });
-  if (context.pages().length === 0) await context.newPage();
+  try {
+    await page.waitForLoadState('load', { timeout: 12_000 });
+    const context = page.context();
+    await page.close({ runBeforeUnload: false });
+    if (context.pages().length === 0) await context.newPage();
+  } catch {
+    // 页面已跳转成功时，清理失败不应把建券结果改判为失败。
+  }
 }
 
-async function clickNewcomerGiftSubmit(page: Page) {
-  const submitButton = await newcomerGiftSubmitButton(page);
-  await submitButton.scrollIntoViewIfNeeded();
-  const box = await submitButton.boundingBox();
-  if (!box) throw new Error('提交按钮不可点击');
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+async function clickNewcomerGiftSubmit(page: Page, optional = false) {
+  try {
+    const submitButton = await newcomerGiftSubmitButton(page);
+    await submitButton.scrollIntoViewIfNeeded();
+    const box = await submitButton.boundingBox();
+    if (!box) throw new Error('提交按钮不可点击');
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    return true;
+  } catch (caught) {
+    if (!optional) throw caught;
+    return false;
+  }
 }
 
 async function shouldRetrySubmit(page: Page) {
   if (!page.url().includes('/allowance/create')) return false;
   if (await page.getByText(/成功|创建成功|提交成功/, { exact: false }).count()) return false;
-  const submitButton = await newcomerGiftSubmitButton(page);
-  return submitButton.isVisible().catch(() => false);
+  return page.locator('div[class*="index-footer"] button.ecom-mcenter-btn-primary')
+    .filter({ hasText: /^提交$/ }).first().isVisible().catch(() => false);
 }
 
 async function newcomerGiftSubmitButton(page: Page) {
