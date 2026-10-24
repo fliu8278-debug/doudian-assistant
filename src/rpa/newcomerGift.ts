@@ -15,6 +15,12 @@ export type NewcomerGiftDraft = {
   discountAmount: number;
 };
 
+class NewcomerGiftSkipError extends Error {
+  constructor(readonly keyword: string, readonly reason: string) {
+    super(reason);
+  }
+}
+
 export function newcomerGiftPageOptions() {
   return { headless: false, newPage: false } as const;
 }
@@ -41,6 +47,10 @@ export async function submitNewcomerGiftTask(profile: ShopAuthStorage, draft: Ne
     submitting = true;
     await step('提交新人礼金', () => submitNewcomerGift(page));
   } catch (caught) {
+    if (caught instanceof NewcomerGiftSkipError) {
+      await closeSkippedNewcomerGiftPage(page);
+      return { submitted: false, skipped: true, message: `已跳过款号：${caught.keyword}，${caught.reason}` };
+    }
     await closeFailedNewcomerGiftPage(page, submitting);
     throw new Error(formatAutomationError(caught, '新人礼金填写失败'));
   }
@@ -61,6 +71,7 @@ async function step(label: string, action: () => Promise<void>) {
   try {
     await action();
   } catch (caught) {
+    if (caught instanceof NewcomerGiftSkipError) throw caught;
     const message = formatAutomationError(caught, '未知错误');
     throw new Error(`${label}失败：${message}`);
   }
@@ -110,8 +121,10 @@ async function pickAllowanceProduct(page: Page, keyword: string) {
   await page.locator('.index-searchBtn--zzy7W').last().click();
   const matchingRows = page.locator('tr, .ecom-mcenter-table-row').filter({ hasText: keyword });
   await matchingRows.first().waitFor({ state: 'visible', timeout: 15_000 }).catch(async () => {
-    const empty = await page.getByText('暂无数据', { exact: false }).count();
-    throw new Error(empty ? `商品搜索无结果：${keyword}` : `商品搜索结果未加载：${keyword}`);
+    if (await page.getByText('暂无数据', { exact: false }).last().isVisible().catch(() => false)) {
+      throw new NewcomerGiftSkipError(keyword, '商品搜索无结果');
+    }
+    throw new Error(`商品搜索结果未加载：${keyword}`);
   });
 
   await checkMatchingProductRows(page, keyword, 'tr, .ecom-mcenter-table-row');
@@ -128,9 +141,16 @@ async function checkMatchingProductRows(page: Page, keyword: string, rowSelector
     if (await checkProductRow(page, row)) checkedCount += 1;
   }
 
-  if (checkedCount === 0) {
-    throw new Error(`商品搜索结果均为区间价或自营品，已跳过：${keyword}`);
+  if (selectableRows.length === 0) {
+    throw new NewcomerGiftSkipError(keyword, '商品搜索结果均为区间价或自营品');
   }
+  if (checkedCount === 0) throw new Error(`商品勾选失败：${keyword}`);
+}
+
+async function closeSkippedNewcomerGiftPage(page: Page) {
+  const context = page.context();
+  if (context.pages().length === 1) await context.newPage();
+  await page.close({ runBeforeUnload: false });
 }
 
 async function checkProductRow(page: Page, row: Locator) {

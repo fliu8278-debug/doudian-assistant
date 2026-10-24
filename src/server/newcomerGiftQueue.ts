@@ -11,7 +11,7 @@ import { submitNewcomerGiftTask } from '../rpa/newcomerGift';
 import { closeDoudianShopPages } from '../rpa/doudianSession';
 import type { AppDatabase } from '../db/database';
 import type { NewcomerGiftBatch, NewcomerGiftRow } from '../shared/types';
-import { runWithConcurrency } from './couponQueue';
+import { couponTaskStatusForResult, runWithConcurrency } from './couponQueue';
 import { formatAutomationError } from '../rpa/errorMessage';
 
 const runningBatches = new Set<string>();
@@ -107,12 +107,8 @@ async function runNewcomerGiftTask(
       NEWCOMER_GIFT_TASK_TIMEOUT_MS
     );
     if (cancelledBatches.has(task.batchId)) return;
-    updateNewcomerGiftTaskStatus(
-      db,
-      task.id,
-      result.submitted ? 'success' : 'waiting_confirm',
-      result.submitted ? null : result.message
-    );
+    const outcome = couponTaskStatusForResult(result);
+    updateNewcomerGiftTaskStatus(db, task.id, outcome.status, outcome.message);
   } catch (caught) {
     updateNewcomerGiftTaskStatus(
       db,
@@ -135,10 +131,11 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
 function finalBatchStatus(batch: NewcomerGiftBatch | undefined) {
   if (!batch) return 'failed';
   const failed = batch.tasks.filter((task) => task.status === 'failed').length;
+  const skipped = batch.tasks.filter((task) => task.status === 'skipped').length;
   const success = batch.tasks.filter((task) => task.status === 'success').length;
   const waiting = batch.tasks.filter((task) => task.status === 'waiting_confirm').length;
-  const done = success + waiting;
-  if (failed === 0 && success === batch.totalCount) return 'success';
+  const done = success + skipped + waiting;
+  if (failed === 0 && success + skipped === batch.totalCount) return 'success';
   if (failed === 0 && done === batch.totalCount) return 'waiting_confirm';
   if (failed === batch.totalCount) return 'failed';
   if (done > 0 || failed > 0) return 'partial';
