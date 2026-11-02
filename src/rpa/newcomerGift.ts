@@ -22,7 +22,7 @@ class NewcomerGiftSkipError extends Error {
 }
 
 export function newcomerGiftPageOptions() {
-  return { headless: false, newPage: false } as const;
+  return { headless: false, newPage: true } as const;
 }
 
 export async function submitNewcomerGiftTask(profile: ShopAuthStorage, draft: NewcomerGiftDraft) {
@@ -120,7 +120,7 @@ async function pickAllowanceProduct(page: Page, keyword: string) {
   await search.press('Enter').catch(() => undefined);
   await page.locator('.index-searchBtn--zzy7W').last().click();
   const matchingRows = page.locator('tr, .ecom-mcenter-table-row').filter({ hasText: keyword });
-  await matchingRows.first().waitFor({ state: 'visible', timeout: 15_000 }).catch(async () => {
+  await matchingRows.first().waitFor({ state: 'visible', timeout: 5_000 }).catch(async () => {
     if (await page.getByText('暂无数据', { exact: false }).last().isVisible().catch(() => false)) {
       throw new NewcomerGiftSkipError(keyword, '商品搜索无结果');
     }
@@ -136,13 +136,20 @@ async function checkMatchingProductRows(page: Page, keyword: string, rowSelector
   const rows = await page.locator(rowSelector).filter({ hasText: keyword }).all();
   const selectableRows = await selectableProductRows(rows);
   let checkedCount = 0;
+  let unavailableCount = 0;
 
   for (const row of selectableRows) {
+    if (/可参与新人礼金\s*0(?!\d)|当前已参与新人礼金/.test(await row.innerText())) {
+      unavailableCount += 1;
+      continue;
+    }
     if (await checkProductRow(page, row)) checkedCount += 1;
   }
 
-  if (selectableRows.length === 0) {
-    throw new NewcomerGiftSkipError(keyword, '商品搜索结果均为区间价或自营品');
+  if (selectableRows.length === unavailableCount) {
+    throw new NewcomerGiftSkipError(keyword, selectableRows.length === 0
+      ? '商品搜索结果均为区间价或自营品'
+      : '商品搜索结果无可参与新人礼金的商品');
   }
   if (checkedCount === 0) throw new Error(`商品勾选失败：${keyword}`);
 }

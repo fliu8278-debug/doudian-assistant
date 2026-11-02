@@ -37,12 +37,63 @@ describe('新人礼金页面', () => {
     `);
     openDoudianShopPage.mockResolvedValue({ page });
 
+    const startedAt = Date.now();
     await expect(submitNewcomerGiftTask({} as Parameters<typeof submitNewcomerGiftTask>[0], {
       shopId: 'shop', activityName: '113821', productSearchKeyword: '113821',
       startTime: '2026-10-24 00:00:00', endTime: '2026-11-14 23:59:59', discountAmount: 5
     })).resolves.toMatchObject({ submitted: false, skipped: true, message: expect.stringContaining('113821') });
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(4_800);
+    expect(Date.now() - startedAt).toBeLessThan(13_000);
     expect(page.isClosed()).toBe(true);
     expect(context.pages()).toHaveLength(1);
+  }, 25_000);
+
+  it('已参与新人礼金且无法勾选的商品直接跳过', async () => {
+    browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.setContent(`
+      <input id="activity_name" />
+      <div id="auto_renewal"><label><input type="radio" checked />不开启</label></div>
+      <div id="participate_type"><label><input type="radio" checked />指定商品</label></div>
+      <div id="deduction_discount_type"><label><input type="radio" checked />不开启</label></div>
+      <button>添加商品</button>
+      <input class="ecom-mcenter-input-tag-input" />
+      <button class="index-searchBtn--zzy7W">搜索</button>
+      <table><tr><td><input type="checkbox" disabled></td><td>118438 该商品当前已参与新人礼金，请更改本活动时间</td></tr></table>
+      <button>确定</button>
+    `);
+    openDoudianShopPage.mockResolvedValue({ page });
+
+    await expect(submitNewcomerGiftTask({} as Parameters<typeof submitNewcomerGiftTask>[0], {
+      shopId: 'shop', activityName: '118438', productSearchKeyword: '118438',
+      startTime: '2026-11-03 00:00:00', endTime: '2026-11-14 23:59:59', discountAmount: 5
+    })).resolves.toMatchObject({ submitted: false, skipped: true });
+    expect(page.isClosed()).toBe(true);
+  }, 25_000);
+
+  it('搜索到商品但可参与新人礼金为 0 时跳过并关闭该页', async () => {
+    browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.setContent(`
+      <input id="activity_name" />
+      <div id="auto_renewal"><label><input type="radio" checked />不开启</label></div>
+      <div id="participate_type"><label><input type="radio" checked />指定商品</label></div>
+      <div id="deduction_discount_type"><label><input type="radio" checked />不开启</label></div>
+      <button>添加商品</button>
+      <input class="ecom-mcenter-input-tag-input" />
+      <button class="index-searchBtn--zzy7W">搜索</button>
+      <table><tr><td><input type="checkbox" disabled></td><td>149906 ¥369 该商品当前可参与新人礼金0</td></tr></table>
+      <button>确定</button>
+    `);
+    openDoudianShopPage.mockResolvedValue({ page });
+
+    await expect(submitNewcomerGiftTask({} as Parameters<typeof submitNewcomerGiftTask>[0], {
+      shopId: 'shop', activityName: '149906', productSearchKeyword: '149906',
+      startTime: '2026-10-24 00:00:00', endTime: '2026-11-14 23:59:59', discountAmount: 5
+    })).resolves.toMatchObject({ submitted: false, skipped: true });
+    expect(page.isClosed()).toBe(true);
   }, 25_000);
 
   it('弹窗初始暂无数据但搜索后出现商品时不能误跳过', async () => {
@@ -129,8 +180,8 @@ describe('新人礼金页面', () => {
     expect(page.mouse.click).toHaveBeenCalledTimes(expectedClicks);
   });
 
-  it('reuses the shop page instead of opening another tab', () => {
-    expect(newcomerGiftPageOptions()).toEqual({ headless: false, newPage: false });
+  it('opens a fresh page for each gift while keeping the shop browser session', () => {
+    expect(newcomerGiftPageOptions()).toEqual({ headless: false, newPage: true });
   });
 
   it('uses the successful page jump without requiring the destination load to finish', async () => {
