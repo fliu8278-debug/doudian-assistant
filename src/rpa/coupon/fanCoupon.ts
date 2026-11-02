@@ -12,7 +12,7 @@ export type FanCouponDraft = CouponRow & { shopId: string };
 export type SubmitFanCouponOptions = { autoSubmit?: boolean };
 export type FanCouponTaskResult = { submitted: boolean; skipped?: boolean; message: string };
 
-const FAN_COUPON_STEP_TIMEOUT_MS = 3_000;
+const FAN_COUPON_STEP_TIMEOUT_MS = 5_000;
 const FAN_COUPON_DIRECT_ENTRY_TIMEOUT_MS = 5_000;
 const FAN_COUPON_SEARCH_TIMEOUT_MS = 5_000;
 
