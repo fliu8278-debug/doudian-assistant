@@ -60,7 +60,10 @@ describe('新人礼金页面', () => {
       <button>添加商品</button>
       <input class="ecom-mcenter-input-tag-input" />
       <button class="index-searchBtn--zzy7W">搜索</button>
-      <table><tr><td><input type="checkbox" disabled></td><td>118438 该商品当前已参与新人礼金，请更改本活动时间</td></tr></table>
+      <table>
+        <tr><td><input type="checkbox" disabled></td><td>118438 ¥339</td></tr>
+        <tr><td colspan="2">该商品当前已参与新人礼金，请更改本活动时间</td></tr>
+      </table>
       <button>确定</button>
     `);
     openDoudianShopPage.mockResolvedValue({ page });
@@ -70,6 +73,7 @@ describe('新人礼金页面', () => {
       startTime: '2026-11-03 00:00:00', endTime: '2026-11-14 23:59:59', discountAmount: 5
     })).resolves.toMatchObject({ submitted: false, skipped: true });
     expect(page.isClosed()).toBe(true);
+    expect(context.pages()).toHaveLength(1);
   }, 25_000);
 
   it('搜索到商品但可参与新人礼金为 0 时跳过并关闭该页', async () => {

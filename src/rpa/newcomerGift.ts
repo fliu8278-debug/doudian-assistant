@@ -139,7 +139,8 @@ async function checkMatchingProductRows(page: Page, keyword: string, rowSelector
   let unavailableCount = 0;
 
   for (const row of selectableRows) {
-    if (/可参与新人礼金\s*0(?!\d)|当前已参与新人礼金/.test(await row.innerText())) {
+    if (/可参与新人礼金\s*0(?!\d)|当前已参与新人礼金/.test(await row.innerText())
+      || await row.locator('input[type="checkbox"]').first().isDisabled().catch(() => false)) {
       unavailableCount += 1;
       continue;
     }
